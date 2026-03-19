@@ -1,5 +1,8 @@
-import { useState } from "react";
+/// <reference types="vite/client" />
+import { useEffect, useMemo, useState } from "react";
+import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { createClient } from "@supabase/supabase-js";
 
 /* ════════════════════════════════════════════════
    Right-side: Tips, illustrations & design assets
@@ -420,9 +423,114 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [direction, setDirection] = useState(1);
   const [processingStep, setProcessingStep] = useState(0);
 
+  const STORAGE_KEY = "onboarding_submission_id_v1";
+  const [onboardingSubmissionId, setOnboardingSubmissionId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const supabase = useMemo(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const key = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+    if (!url || !key) return null;
+
+    return createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (onboardingSubmissionId) localStorage.setItem(STORAGE_KEY, onboardingSubmissionId);
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors (e.g., in restricted environments)
+    }
+  }, [onboardingSubmissionId]);
+
   const total = steps.length;
   const step = steps[currentStep];
   const value = data[step?.id] || "";
+
+  const buildAnswersRaw = (overrides?: Record<string, unknown>) => {
+    const base: Record<string, unknown> = { ...data };
+    return { ...base, ...(overrides || {}) };
+  };
+
+  const persistOnboarding = async (payload: {
+    current_step: number;
+    completed_at?: string | null;
+    empresa?: string | null;
+    industria?: string | null;
+    industria_otro?: string | null;
+    tamano?: string | null;
+    problema?: string | null;
+    presupuesto?: string | null;
+    answers_raw: Record<string, unknown>;
+    clearLocalStorageOnSuccess?: boolean;
+  }) => {
+    if (!supabase) {
+      console.warn("Supabase env vars missing; skipping persistence.");
+      return;
+    }
+
+    const saveData: Record<string, unknown> = {
+      current_step: payload.current_step,
+      completed_at: payload.completed_at ?? null,
+      empresa: payload.empresa ?? undefined,
+      industria: payload.industria ?? undefined,
+      industria_otro: payload.industria_otro ?? undefined,
+      tamano: payload.tamano ?? undefined,
+      problema: payload.problema ?? undefined,
+      presupuesto: payload.presupuesto ?? undefined,
+      answers_raw: payload.answers_raw,
+    };
+
+    // Remove undefined keys so we don't overwrite existing columns with nulls.
+    Object.keys(saveData).forEach((k) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((saveData as any)[k] === undefined) delete (saveData as any)[k];
+    });
+
+    try {
+      setIsSaving(true);
+
+      if (!onboardingSubmissionId) {
+        const insert = await supabase
+          .from("onboarding_submissions")
+          .insert(saveData)
+          .select("id")
+          .single();
+
+        if (insert.error) throw insert.error;
+
+        setOnboardingSubmissionId(insert.data.id);
+      } else {
+        const update = await supabase
+          .from("onboarding_submissions")
+          .update(saveData)
+          .eq("id", onboardingSubmissionId);
+
+        if (update.error) throw update.error;
+      }
+
+      if (payload.clearLocalStorageOnSuccess) {
+        setOnboardingSubmissionId(null);
+      }
+    } catch (err) {
+      console.error("Failed to persist onboarding answers:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const canContinue = () => {
     if (step.type === "problema") return selectedPrompts.length > 0 || extraDetail.trim().length > 0;
@@ -452,11 +560,52 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     }, 900);
   };
 
-  const goNext = () => {
+  const goNext = async () => {
+    const isLastStep = currentStep >= total - 1;
+    const nextStepNumber = isLastStep ? total : Math.min(currentStep + 2, total);
+
+    // Step-specific fields to store in Supabase.
+    let fields: {
+      empresa?: string | null;
+      industria?: string | null;
+      industria_otro?: string | null;
+      tamano?: string | null;
+      problema?: string | null;
+      presupuesto?: string | null;
+    } = {};
+
+    // Ensure our persistence uses the newest values (React state updates are async).
+    let answersOverrides: Record<string, unknown> = {};
+
+    if (step.id === "empresa") {
+      fields.empresa = data.empresa ?? null;
+      answersOverrides = {};
+    }
+
+    if (step.id === "industria" && value === "otro") {
+      fields.industria = "otro";
+      fields.industria_otro = data.industria_otro ?? otroText ?? null;
+    }
+
     if (step.type === "problema") {
       const combined = [...selectedPrompts, extraDetail].filter(Boolean).join("; ");
+      fields.problema = combined;
+      answersOverrides.problema = combined;
       setData({ ...data, problema: combined });
     }
+
+    if (step.id === "presupuesto") {
+      fields.presupuesto = value.trim() ? value : null;
+    }
+
+    await persistOnboarding({
+      current_step: nextStepNumber,
+      completed_at: isLastStep ? new Date().toISOString() : null,
+      ...fields,
+      answers_raw: buildAnswersRaw(answersOverrides),
+      clearLocalStorageOnSuccess: isLastStep,
+    });
+
     if (currentStep < total - 1) {
       setDirection(1);
       setCurrentStep((s) => s + 1);
@@ -477,7 +626,46 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       setData({ ...data, [step.id]: val });
       return; // Don't auto-advance, let user type
     }
+
     setData({ ...data, [step.id]: val });
+
+    const isLastStep = currentStep >= total - 1;
+    const nextStepNumber = isLastStep ? total : Math.min(currentStep + 2, total);
+    const answersOverrides: Record<string, unknown> = { [step.id]: val };
+
+    // Map step.id (which includes "tamaño") to DB column "tamano".
+    const payloadFields: {
+      empresa?: string | null;
+      industria?: string | null;
+      industria_otro?: string | null;
+      tamano?: string | null;
+      problema?: string | null;
+      presupuesto?: string | null;
+    } = {};
+
+    if (step.id === "industria") {
+      payloadFields.industria = val;
+      payloadFields.industria_otro = null;
+    }
+
+    if (step.id === "tamaño") {
+      payloadFields.tamano = val;
+      // Keep the accented key for answers_raw.
+      answersOverrides["tamaño"] = val;
+    }
+
+    if (step.id === "presupuesto") {
+      payloadFields.presupuesto = val;
+    }
+
+    void persistOnboarding({
+      current_step: nextStepNumber,
+      completed_at: isLastStep ? new Date().toISOString() : null,
+      ...payloadFields,
+      answers_raw: buildAnswersRaw(answersOverrides),
+      clearLocalStorageOnSuccess: isLastStep,
+    });
+
     setTimeout(() => {
       setDirection(1);
       if (currentStep < total - 1) {
@@ -489,9 +677,9 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && canContinue() && step.type === "text") {
+    if (e.key === "Enter" && canContinue() && step.type === "text" && !isSaving) {
       e.preventDefault();
-      goNext();
+      void goNext();
     }
   };
 
@@ -640,7 +828,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                               onKeyDown={(e) => {
                                 if (e.key === "Enter" && otroText.trim().length > 0) {
                                   e.preventDefault();
-                                  goNext();
+                                  void goNext();
                                 }
                               }}
                               placeholder="Ej: Restaurante, Inmobiliaria, Logística..."
@@ -946,7 +1134,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center gap-2">
                   {step.optional && (
                     <button
-                      onClick={goNext}
+                      onClick={() => void goNext()}
                       className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer px-3 py-2"
                       style={{ fontWeight: 500 }}
                     >
@@ -955,8 +1143,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                   )}
                   {(step.type === "text" || step.type === "problema") && (
                     <button
-                      onClick={goNext}
-                      disabled={!canContinue()}
+                      onClick={() => void goNext()}
+                      disabled={!canContinue() || isSaving}
                       className={`text-[13px] px-5 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                         canContinue()
                           ? "bg-blue-600 text-white hover:bg-blue-700"
@@ -969,8 +1157,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                   )}
                   {value === "otro" && step.id === "industria" && (
                     <button
-                      onClick={goNext}
-                      disabled={otroText.trim().length === 0}
+                      onClick={() => void goNext()}
+                      disabled={otroText.trim().length === 0 || isSaving}
                       className={`text-[13px] px-5 py-2 rounded-lg transition-all duration-200 cursor-pointer ${
                         otroText.trim().length > 0
                           ? "bg-blue-600 text-white hover:bg-blue-700"

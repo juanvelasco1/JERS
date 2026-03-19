@@ -39,7 +39,7 @@ jobs:
           VITE_API_KEY: ${{ vars.API_KEY }}
           VITE_GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
           VITE_PROJECT_ID: ${{ vars.PROJECT_ID }}
-        run: npm run build
+        run: npm run build -- --base="/${{ github.event.repository.name }}/"
 
       - name: Add SPA fallback (404.html)
         run: |
