@@ -19,6 +19,7 @@ function Doodle({ children, className }: { children: React.ReactNode; className?
       {children}
     </motion.div>
   );
+  
 }
 
 export function HomePage() {
