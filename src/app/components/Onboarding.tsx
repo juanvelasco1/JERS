@@ -410,6 +410,12 @@ function getIndustriaLabel(val: string) {
   return map[val] || val;
 }
 
+type AIDiagnosis = {
+  summary: string;
+  recommendations: { area: string; desc: string; priority: "Alta" | "Media" }[];
+  nextSteps: string[];
+};
+
 /* ════════════════════════════════════════════════
    Main Onboarding Component
    ════════════════════════════════════════════════ */
@@ -422,6 +428,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<"form" | "processing" | "results">("form");
   const [direction, setDirection] = useState(1);
   const [processingStep, setProcessingStep] = useState(0);
+  const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(null);
 
   const STORAGE_KEY = "onboarding_submission_id_v1";
   const [onboardingSubmissionId, setOnboardingSubmissionId] = useState<string | null>(() => {
@@ -546,19 +553,161 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     "Preparando tu diagnóstico...",
   ];
 
+  const buildFallbackDiagnosis = (answers: Record<string, string>, prompts: string[]): AIDiagnosis => {
+    const fallbackRecs = getRecommendations(answers, prompts);
+    return {
+      summary: `Basándonos en tu perfil como empresa de ${getIndustriaLabel(answers.industria)}, identificamos ${fallbackRecs.length} áreas clave donde podemos ayudarte a crecer digitalmente.`,
+      recommendations: fallbackRecs.map((r) => ({ area: r.area, desc: r.desc, priority: r.priority as "Alta" | "Media" })),
+      nextSteps: [
+        "Agendas una llamada gratuita de 30 min",
+        "Revisamos juntos este diagnóstico",
+        "Te enviamos una propuesta sin compromiso",
+      ],
+    };
+  };
+
+  const parseAiJson = (raw: string): AIDiagnosis | null => {
+    const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const candidate = jsonMatch ? jsonMatch[0] : cleaned;
+
+    try {
+      const parsed = JSON.parse(candidate) as Partial<AIDiagnosis>;
+      if (!parsed.summary || !Array.isArray(parsed.recommendations) || !Array.isArray(parsed.nextSteps)) return null;
+
+      const recommendations: AIDiagnosis["recommendations"] = parsed.recommendations
+        .filter((r) => r && typeof r.area === "string" && typeof r.desc === "string")
+        .slice(0, 4)
+        .map((r) => ({
+          area: r.area,
+          desc: r.desc,
+          priority: r.priority === "Alta" ? "Alta" : "Media",
+        }));
+
+      const nextSteps = parsed.nextSteps
+        .filter((stepText): stepText is string => typeof stepText === "string" && stepText.trim().length > 0)
+        .slice(0, 3);
+
+      if (!recommendations.length || !nextSteps.length) return null;
+      return { summary: parsed.summary, recommendations, nextSteps };
+    } catch {
+      return null;
+    }
+  };
+
+  const generateDiagnosisWithAI = async (answers: Record<string, string>, prompts: string[]): Promise<AIDiagnosis> => {
+    const apiKey = (import.meta.env.VITE_OPENAI_API_KEY as string | undefined)
+      || (import.meta.env.OPENAI_API_KEY as string | undefined);
+
+    if (!apiKey) return buildFallbackDiagnosis(answers, prompts);
+
+    const prompt = `
+Genera un diagnóstico para una consultora digital en español.
+Responde SOLO con JSON válido, sin markdown, con esta forma exacta:
+{
+  "summary": "string",
+  "recommendations": [
+    { "area": "string", "desc": "string", "priority": "Alta|Media" }
+  ],
+  "nextSteps": ["string", "string", "string"]
+}
+
+Reglas:
+- Tono claro, profesional y cercano.
+- 3 a 4 recomendaciones máximo.
+- "nextSteps" exactamente 3 elementos, accionables.
+- No inventes datos no provistos.
+
+Datos del cliente:
+- Empresa: ${answers.empresa || "No especificado"}
+- Industria: ${getIndustriaLabel(answers.industria || "otro")}
+- Tamaño: ${answers["tamaño"] || "No especificado"}
+- Problema: ${answers.problema || "No especificado"}
+- Presupuesto: ${getInvestmentLabel(answers.presupuesto || "")}
+- Retos seleccionados: ${prompts.join(" | ") || "No especificado"}
+`.trim();
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Eres un consultor digital. Devuelve solo JSON válido." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+          max_tokens: 800,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI HTTP ${response.status}: ${errorText}`);
+      }
+
+      const json = await response.json();
+      const text = json?.choices?.[0]?.message?.content as string | undefined;
+      if (!text) throw new Error("OpenAI response did not include text.");
+
+      const parsed = parseAiJson(text);
+      if (!parsed) throw new Error("OpenAI JSON format invalid.");
+      return parsed;
+    } catch (err) {
+      console.error("AI diagnosis failed, using fallback:", err);
+      return buildFallbackDiagnosis(answers, prompts);
+    }
+  };
+
+  const runProcessingAnimation = () =>
+    new Promise<void>((resolve) => {
+      let s = 0;
+      const interval = setInterval(() => {
+        s++;
+        if (s >= processingSteps.length) {
+          clearInterval(interval);
+          setTimeout(() => resolve(), 600);
+        } else {
+          setProcessingStep(s);
+        }
+      }, 900);
+    });
+
+  const persistDiagnosisResult = async (diagnosis: AIDiagnosis, answersSnapshot: Record<string, string>, promptsSnapshot: string[]) => {
+    await persistOnboarding({
+      current_step: total,
+      completed_at: new Date().toISOString(),
+      answers_raw: buildAnswersRaw({
+        ...answersSnapshot,
+        problema: answersSnapshot.problema || [...promptsSnapshot, extraDetail].filter(Boolean).join("; "),
+        ai_diagnosis: diagnosis,
+      }),
+      clearLocalStorageOnSuccess: true,
+    });
+  };
+
   const startProcessing = () => {
     setPhase("processing");
     setProcessingStep(0);
-    let s = 0;
-    const interval = setInterval(() => {
-      s++;
-      if (s >= processingSteps.length) {
-        clearInterval(interval);
-        setTimeout(() => setPhase("results"), 600);
-      } else {
-        setProcessingStep(s);
-      }
-    }, 900);
+
+    const answersSnapshot = { ...data };
+    const promptsSnapshot = [...selectedPrompts];
+
+    void (async () => {
+      const [diagnosis] = await Promise.all([
+        generateDiagnosisWithAI(answersSnapshot, promptsSnapshot),
+        runProcessingAnimation(),
+      ]);
+
+      await persistDiagnosisResult(diagnosis, answersSnapshot, promptsSnapshot);
+      setAiDiagnosis(diagnosis);
+      setPhase("results");
+    })();
   };
 
   const goNext = async () => {
@@ -604,7 +753,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       completed_at: isLastStep ? new Date().toISOString() : null,
       ...fields,
       answers_raw: buildAnswersRaw(answersOverrides),
-      clearLocalStorageOnSuccess: isLastStep,
+      clearLocalStorageOnSuccess: false,
     });
 
     if (currentStep < total - 1) {
@@ -690,7 +839,17 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     exit: (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30 }),
   };
 
-  const recommendations = getRecommendations(data, selectedPrompts);
+  const recommendations = aiDiagnosis?.recommendations ?? getRecommendations(data, selectedPrompts).map((rec) => ({
+    ...rec,
+    priority: rec.priority === "Alta" ? "Alta" : "Media",
+  }));
+  const summaryText = aiDiagnosis?.summary
+    ?? `Basándonos en tu perfil como empresa de ${getIndustriaLabel(data.industria)}, identificamos ${recommendations.length} áreas clave donde podemos ayudarte a crecer digitalmente.`;
+  const nextSteps = aiDiagnosis?.nextSteps ?? [
+    "Agendas una llamada gratuita de 30 min",
+    "Revisamos juntos este diagnóstico",
+    "Te enviamos una propuesta sin compromiso",
+  ];
 
   return (
     <div className="flex flex-col h-full">
@@ -742,7 +901,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Form content */}
-          <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 overflow-y-auto">
+          <div className="flex-1 flex flex-col justify-center px-6 sm:px-10">
             <div className={`w-full mx-auto py-6 ${phase === "results" ? "max-w-2xl" : "max-w-sm"}`} onKeyDown={handleKeyDown}>
               <AnimatePresence mode="wait" custom={direction}>
                 {/* ─── FORM ─── */}
@@ -1003,11 +1162,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         className="col-span-2 bg-white rounded-xl p-4 border border-gray-100"
                       >
                         <p className="text-[10px] text-blue-500 mb-1.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>RESUMEN</p>
-                        <p className="text-[12px] text-gray-600 leading-relaxed">
-                          Basándonos en tu perfil como empresa de <span style={{ fontWeight: 600 }}>{getIndustriaLabel(data.industria)}</span>,
-                          identificamos <span style={{ fontWeight: 600 }}>{recommendations.length} áreas clave</span> donde
-                          podemos ayudarte a crecer digitalmente.
-                        </p>
+                        <p className="text-[12px] text-gray-600 leading-relaxed">{summaryText}</p>
                       </motion.div>
 
                       <motion.div
@@ -1052,22 +1207,18 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                       >
                         <p className="text-[10px] text-blue-500 mb-2.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>¿QUÉ SIGUE?</p>
                         <div className="space-y-2">
-                          {[
-                            { n: "1", text: "Agendas una llamada gratuita de 30 min" },
-                            { n: "2", text: "Revisamos juntos este diagnóstico" },
-                            { n: "3", text: "Te enviamos una propuesta sin compromiso" },
-                          ].map((item, i) => (
+                          {nextSteps.map((text, i) => (
                             <motion.div
-                              key={item.n}
+                              key={`${i}-${text}`}
                               initial={{ opacity: 0, x: -6 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.8 + i * 0.1 }}
                               className="flex gap-2 items-center"
                             >
                               <span className="w-[18px] h-[18px] rounded-full bg-blue-600 text-white text-[9px] flex items-center justify-center shrink-0" style={{ fontWeight: 700 }}>
-                                {item.n}
+                                {i + 1}
                               </span>
-                              <span className="text-[11px] text-gray-600">{item.text}</span>
+                              <span className="text-[11px] text-gray-600">{text}</span>
                             </motion.div>
                           ))}
                         </div>

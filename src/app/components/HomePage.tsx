@@ -35,7 +35,7 @@ export function HomePage() {
 
   return (
     <>
-      <div className="min-h-[calc(100vh-64px)] pb-20 relative overflow-hidden flex flex-col">
+      <div className="min-h-[calc(100vh-64px)] pb-20 relative overflow-x-hidden flex flex-col">
         {/* Doodles */}
         <AnimatePresence>
           {!showOnboarding && !showContact && (
@@ -170,7 +170,7 @@ export function HomePage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className="bg-white border border-gray-100 w-full"
-                  style={{ height: "min(640px, calc(100vh - 200px))" }}
+                  style={{ minHeight: "min(640px, calc(100vh - 200px))" }}
                 >
                   <Onboarding onClose={() => setShowOnboarding(false)} />
                 </motion.div>
@@ -182,7 +182,7 @@ export function HomePage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className="bg-white border border-gray-100 w-full rounded-2xl"
-                  style={{ height: "min(640px, calc(100vh - 200px))" }}
+                  style={{ minHeight: "min(640px, calc(100vh - 200px))" }}
                 >
                   <AboutCard onClose={() => setShowContact(false)} />
                 </motion.div>

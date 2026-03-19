@@ -112,7 +112,7 @@ async function run() {
 
     const { data, error } = await supabase
       .from("onboarding_submissions")
-      .select("id, created_at, current_step, empresa, industria, tamano, problema, presupuesto, completed_at")
+      .select("id, created_at, current_step, empresa, industria, tamano, problema, presupuesto, completed_at, answers_raw")
       .eq("empresa", empresa)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -124,11 +124,18 @@ async function run() {
       throw new Error("No onboarding row found in Supabase for test company name.");
     }
 
+    const aiDiagnosis = data?.answers_raw?.ai_diagnosis;
+    if (!aiDiagnosis || typeof aiDiagnosis.summary !== "string" || !Array.isArray(aiDiagnosis.recommendations)) {
+      fs.writeFileSync(path.join(artifactsDir, "browser-logs.txt"), browserLogs.join("\n"));
+      throw new Error("Supabase row found, but answers_raw.ai_diagnosis is missing or invalid.");
+    }
+
     const summary = {
       ok: true,
       appUrl,
       empresa,
       row: data,
+      aiDiagnosis,
       screenshots: [
         "e2e-artifacts/01-home.png",
         "e2e-artifacts/02-step1.png",
