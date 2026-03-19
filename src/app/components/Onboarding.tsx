@@ -902,7 +902,7 @@ Datos del cliente:
 
           {/* Form content */}
           <div className="flex-1 flex flex-col justify-center px-6 sm:px-10">
-            <div className={`w-full mx-auto py-6 ${phase === "results" ? "max-w-2xl" : "max-w-sm"}`} onKeyDown={handleKeyDown}>
+            <div className={`w-full mx-auto py-4 sm:py-6 ${phase === "results" ? "max-w-2xl" : "max-w-sm"}`} onKeyDown={handleKeyDown}>
               <AnimatePresence mode="wait" custom={direction}>
                 {/* ─── FORM ─── */}
                 {phase === "form" && (

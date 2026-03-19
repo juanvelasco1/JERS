@@ -170,7 +170,7 @@ export function HomePage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className="bg-white border border-gray-100 w-full"
-                  style={{ minHeight: "min(640px, calc(100vh - 200px))" }}
+                  style={{ height: "clamp(560px, calc(100dvh - 120px), 760px)" }}
                 >
                   <Onboarding onClose={() => setShowOnboarding(false)} />
                 </motion.div>
@@ -182,7 +182,7 @@ export function HomePage() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className="bg-white border border-gray-100 w-full rounded-2xl"
-                  style={{ minHeight: "min(640px, calc(100vh - 200px))" }}
+                  style={{ height: "clamp(560px, calc(100dvh - 120px), 760px)" }}
                 >
                   <AboutCard onClose={() => setShowContact(false)} />
                 </motion.div>
