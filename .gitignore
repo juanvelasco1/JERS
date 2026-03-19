@@ -17,7 +17,7 @@ build
 
 .cursor
 .cursorignore
-
+e2e-artifacts 
 
 
 

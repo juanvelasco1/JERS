@@ -435,7 +435,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
   const supabase = useMemo(() => {
     const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    const key = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+    const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
+      || (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined);
     if (!url || !key) return null;
 
     return createClient(url, key, {
