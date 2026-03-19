@@ -32,18 +32,21 @@ jobs:
 
       - name: Build
         env:
-          API_KEY: ${{ vars.API_KEY }}
-          GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
-          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          API_KEY: ${{ vars.API_KEY || secrets.API_KEY }}
+          GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY || secrets.GEMINI_API_KEY }}
+          PROJECT_ID: ${{ vars.PROJECT_ID || secrets.PROJECT_ID }}
           # Vite exposes build-time env vars starting with `VITE_` to the frontend bundle.
-          VITE_API_KEY: ${{ vars.API_KEY }}
-          VITE_GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
-          VITE_PROJECT_ID: ${{ vars.VITE_PROJECT_ID }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          VITE_OPENAI_API_KEY: ${{ vars.VITE_OPENAI_API_KEY }}
+          VITE_API_KEY: ${{ vars.API_KEY || secrets.API_KEY }}
+          VITE_GEMINI_API_KEY: ${{ vars.VITE_GEMINI_API_KEY || vars.GEMINI_API_KEY || secrets.VITE_GEMINI_API_KEY || secrets.GEMINI_API_KEY }}
+          VITE_PROJECT_ID: ${{ vars.VITE_PROJECT_ID || vars.PROJECT_ID || secrets.VITE_PROJECT_ID || secrets.PROJECT_ID }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_OPENAI_API_KEY: ${{ vars.VITE_OPENAI_API_KEY || secrets.VITE_OPENAI_API_KEY }}
         run: |
           # Fail fast if required runtime env vars are missing.
+          echo "Env check: VITE_SUPABASE_ANON_KEY set? $([ -n "$VITE_SUPABASE_ANON_KEY" ] && echo yes || echo no)"
+          echo "Env check: VITE_SUPABASE_URL set? $([ -n "$VITE_SUPABASE_URL" ] && echo yes || echo no)"
+          echo "Env check: VITE_PROJECT_ID set? $([ -n "$VITE_PROJECT_ID" ] && echo yes || echo no)"
           if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
             echo "Missing VITE_SUPABASE_ANON_KEY in GitHub Variables."
             exit 1
