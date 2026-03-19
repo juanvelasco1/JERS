@@ -19,9 +19,9 @@ function Doodle({ children, className }: { children: React.ReactNode; className?
       {children}
     </motion.div>
   );
-  
-}
 
+}
+ 
 export function HomePage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showContact, setShowContact] = useState(false);
