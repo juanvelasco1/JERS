@@ -38,11 +38,21 @@ jobs:
           # Vite exposes build-time env vars starting with `VITE_` to the frontend bundle.
           VITE_API_KEY: ${{ vars.API_KEY }}
           VITE_GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
-          VITE_PROJECT_ID: ${{ vars.PROJECT_ID }}
+          VITE_PROJECT_ID: ${{ vars.VITE_PROJECT_ID }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_OPENAI_API_KEY: ${{ vars.VITE_OPENAI_API_KEY }}
-        run: npm run build -- --base="/${{ github.event.repository.name }}/"
+        run: |
+          # Fail fast if required runtime env vars are missing.
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "Missing VITE_SUPABASE_ANON_KEY in GitHub Variables."
+            exit 1
+          fi
+          if [ -z "$VITE_SUPABASE_URL" ] && [ -z "$VITE_PROJECT_ID" ]; then
+            echo "Missing both VITE_SUPABASE_URL and VITE_PROJECT_ID in GitHub Variables."
+            exit 1
+          fi
+          npm run build -- --base="/${{ github.event.repository.name }}/"
 
       - name: Add SPA fallback (404.html)
         run: |
