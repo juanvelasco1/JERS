@@ -19,12 +19,14 @@ describe("diagnosisAi", () => {
         ],
         narrative: "Texto del flujo que conecta recomendaciones.",
       },
+      sugerencia_consultoria: "Priorizar landing con CTA claro antes de invertir en ads.",
     });
 
     const parsed = parseDiagnosisJson(raw);
     expect(parsed).not.toBeNull();
     expect(parsed?.solutionFlow?.steps).toHaveLength(4);
     expect(parsed?.solutionFlow?.narrative).toContain("recomendaciones");
+    expect(parsed?.sugerenciaConsultoria).toContain("landing");
   });
 
   it("buildFallbackSolutionFlow uses recommendation areas", () => {

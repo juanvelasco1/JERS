@@ -28,6 +28,44 @@ function loadEnv(filePath) {
   return result;
 }
 
+/** Supabase JWT (anon/service) contains `ref` — must match *.supabase.co host */
+function refFromSupabaseJwt(jwt) {
+  const parts = jwt.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const json = Buffer.from(parts[1], "base64url").toString("utf8");
+    const payload = JSON.parse(json);
+    return typeof payload.ref === "string" ? payload.ref : null;
+  } catch {
+    return null;
+  }
+}
+
+function refFromSupabaseUrl(urlStr) {
+  try {
+    const h = new URL(urlStr).hostname;
+    const m = h.match(/^([a-z0-9]+)\.supabase\.co$/i);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function assertUrlMatchesAnonKey(urlStr, anonJwt) {
+  const urlRef = refFromSupabaseUrl(urlStr);
+  const jwtRef = refFromSupabaseJwt(anonJwt);
+  if (!urlRef || !jwtRef) {
+    console.warn("Could not parse project ref from URL or anon key; skipping ref check.");
+    return;
+  }
+  if (urlRef !== jwtRef) {
+    throw new Error(
+      `VITE_SUPABASE_URL host (${urlRef}.supabase.co) does not match VITE_SUPABASE_ANON_KEY project ref (${jwtRef}). ` +
+        "Use the anon key from the same project as the URL (Settings → API).",
+    );
+  }
+}
+
 async function run() {
   const env = loadEnv(envPath);
   const projectId = env.PROJECT_ID || env.VITE_PROJECT_ID;
@@ -39,6 +77,8 @@ async function run() {
   if (!url || !anonKey) {
     throw new Error("Missing VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY in .env");
   }
+
+  assertUrlMatchesAnonKey(url, anonKey);
 
   const anon = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },

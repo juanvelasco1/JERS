@@ -723,6 +723,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
   const buildFallbackDiagnosis = (answers: Record<string, string>, prompts: string[]): AIDiagnosis => {
     const fallbackRecs = getRecommendations(answers, prompts);
+    const top = fallbackRecs[0];
     return {
       summary: `Basándonos en tu perfil como empresa de ${getIndustriaLabel(answers.industria)}, identificamos ${fallbackRecs.length} áreas clave donde podemos ayudarte a crecer digitalmente.`,
       recommendations: fallbackRecs.map((r) => ({ area: r.area, desc: r.desc, priority: r.priority as "Alta" | "Media" })),
@@ -732,14 +733,27 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         "Te enviamos una propuesta sin compromiso",
       ],
       solutionFlow: buildFallbackSolutionFlow(fallbackRecs),
+      sugerenciaConsultoria: top
+        ? `Empezar por ${top.area}: ${top.desc.slice(0, 200)}${top.desc.length > 200 ? "…" : ""}`
+        : "Define con el equipo un primer entregable pequeño (web o automatización) alineado a tu presupuesto.",
+      source: "fallback",
     };
   };
 
-  const generateDiagnosisWithAI = async (answers: Record<string, string>, prompts: string[]): Promise<AIDiagnosis> => {
+  const generateDiagnosisWithAI = async (
+    answers: Record<string, string>,
+    prompts: string[],
+    filesMeta: ContextoArchivoMeta[],
+  ): Promise<{ diagnosis: AIDiagnosis; rawResponseText?: string }> => {
     const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
     const openaiKey =
       ((import.meta.env.VITE_OPENAI_API_KEY as string | undefined)
         || (import.meta.env.OPENAI_API_KEY as string | undefined))?.trim();
+
+    const archivosBlock =
+      filesMeta.length > 0
+        ? filesMeta.map((f, i) => `  ${i + 1}. ${f.name} (${f.size} bytes) — ${f.url || "sin URL pública"}`).join("\n")
+        : "  (ningún archivo adjunto)";
 
     const prompt = buildDiagnosisUserPrompt([
       "Genera un diagnóstico para una consultora digital en español.",
@@ -753,16 +767,25 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       `- Retos seleccionados: ${prompts.join(" | ") || "No especificado"}`,
       `- Punto de partida: ${getContextoActualLabel(answers.contexto_actual || "")}`,
       `- Detalle de contexto: ${answers.contexto_detalle?.trim() || "No especificado"}`,
+      "",
+      "Documentación / archivos opcionales (solo metadatos; el modelo no ve el binario):",
+      archivosBlock,
     ]);
 
     try {
-      if (geminiKey) return await fetchGeminiDiagnosis(prompt, geminiKey);
-      if (openaiKey) return await fetchOpenAIDiagnosis(prompt, openaiKey);
+      if (geminiKey) {
+        const { diagnosis, rawResponseText } = await fetchGeminiDiagnosis(prompt, geminiKey);
+        return { diagnosis, rawResponseText };
+      }
+      if (openaiKey) {
+        const { diagnosis, rawResponseText } = await fetchOpenAIDiagnosis(prompt, openaiKey);
+        return { diagnosis, rawResponseText };
+      }
     } catch (err) {
       console.error("AI diagnosis failed, using fallback:", err);
     }
 
-    return buildFallbackDiagnosis(answers, prompts);
+    return { diagnosis: buildFallbackDiagnosis(answers, prompts) };
   };
 
   const runProcessingAnimation = () =>
@@ -779,7 +802,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       }, 900);
     });
 
-  const persistDiagnosisResult = async (diagnosis: AIDiagnosis, answersSnapshot: Record<string, string>, promptsSnapshot: string[]) => {
+  const persistDiagnosisResult = async (
+    diagnosis: AIDiagnosis,
+    answersSnapshot: Record<string, string>,
+    promptsSnapshot: string[],
+    rawResponseText?: string,
+  ) => {
     await persistOnboarding({
       current_step: total,
       completed_at: new Date().toISOString(),
@@ -788,6 +816,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         problema: answersSnapshot.problema || [...promptsSnapshot, extraDetail].filter(Boolean).join("; "),
         ai_diagnosis: diagnosis,
         ...(contextoArchivosMeta.length > 0 ? { contexto_archivos: contextoArchivosMeta } : {}),
+        ...(diagnosis.source === "gemini" && rawResponseText
+          ? { gemini_raw_response: rawResponseText }
+          : {}),
+        ...(diagnosis.source === "openai" && rawResponseText
+          ? { openai_raw_response: rawResponseText }
+          : {}),
       }),
       clearLocalStorageOnSuccess: true,
     });
@@ -801,12 +835,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     const promptsSnapshot = [...selectedPrompts];
 
     void (async () => {
-      const [diagnosis] = await Promise.all([
-        generateDiagnosisWithAI(answersSnapshot, promptsSnapshot),
+      const [{ diagnosis, rawResponseText }] = await Promise.all([
+        generateDiagnosisWithAI(answersSnapshot, promptsSnapshot, contextoArchivosMeta),
         runProcessingAnimation(),
       ]);
 
-      await persistDiagnosisResult(diagnosis, answersSnapshot, promptsSnapshot);
+      await persistDiagnosisResult(diagnosis, answersSnapshot, promptsSnapshot, rawResponseText);
       setAiDiagnosis(diagnosis);
       setPhase("results");
     })();
@@ -1369,6 +1403,13 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         <p className="text-[11px] text-gray-400 truncate">
                           {data.empresa || "Tu empresa"} — {getIndustriaLabel(data.industria)}
                         </p>
+                        {aiDiagnosis?.source && (
+                          <p className="text-[10px] text-blue-500/90 mt-1" style={{ fontWeight: 500 }}>
+                            {aiDiagnosis.source === "gemini" && "Informe basado en Gemini (guardado en tu registro)"}
+                            {aiDiagnosis.source === "openai" && "Informe basado en OpenAI (guardado en tu registro)"}
+                            {aiDiagnosis.source === "fallback" && "Informe base (IA no disponible o error de red)"}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1396,6 +1437,23 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           {getInvestmentLabel(data.presupuesto)}
                         </p>
                       </motion.div>
+
+                      {aiDiagnosis?.sugerenciaConsultoria?.trim() && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.38 }}
+                          className="col-span-3 rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50/90 to-white p-3"
+                        >
+                          <p
+                            className="text-[9px] text-emerald-700 mb-1"
+                            style={{ fontWeight: 600, letterSpacing: "0.04em" }}
+                          >
+                            SUGERENCIA CLAVE
+                          </p>
+                          <p className="text-[11px] text-gray-700 leading-snug">{aiDiagnosis.sugerenciaConsultoria}</p>
+                        </motion.div>
+                      )}
 
                       {/* Row 2: Recommendations */}
                       {recommendations.map((rec, i) => (

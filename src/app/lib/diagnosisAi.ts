@@ -5,11 +5,23 @@ export type SolutionFlowData = {
   narrative: string;
 };
 
+export type DiagnosisSource = "gemini" | "openai" | "fallback";
+
 export type AIDiagnosis = {
   summary: string;
   recommendations: { area: string; desc: string; priority: "Alta" | "Media" }[];
   nextSteps: string[];
   solutionFlow?: SolutionFlowData;
+  /** Una sugerencia prioritaria y accionable (Gemini / OpenAI) */
+  sugerenciaConsultoria?: string;
+  /** Quién generó el informe (se persiste en answers_raw.ai_diagnosis) */
+  source?: DiagnosisSource;
+};
+
+/** Resultado del modelo + texto crudo para auditoría en Supabase */
+export type DiagnosisModelResult = {
+  diagnosis: AIDiagnosis;
+  rawResponseText: string;
 };
 
 const DEFAULT_FLOW: SolutionFlowData = {
@@ -108,11 +120,20 @@ export function parseDiagnosisJson(raw: string): AIDiagnosis | null {
 
     const solutionFlow = normalizeSolutionFlow(parsed.solutionFlow);
 
+    const rawSug =
+      (parsed as { sugerencia_consultoria?: string }).sugerencia_consultoria ??
+      (parsed as { sugerenciaConsultoria?: string }).sugerenciaConsultoria;
+    let sugerenciaConsultoria: string | undefined;
+    if (typeof rawSug === "string" && rawSug.trim()) {
+      sugerenciaConsultoria = rawSug.trim().slice(0, 600);
+    }
+
     return {
       summary,
       recommendations,
       nextSteps,
       ...(solutionFlow ? { solutionFlow } : {}),
+      ...(sugerenciaConsultoria ? { sugerenciaConsultoria } : {}),
     };
   } catch {
     return null;
@@ -131,6 +152,7 @@ Responde SOLO con JSON válido (sin markdown), con esta forma exacta:
     { "area": "string", "desc": "string (breve)", "priority": "Alta|Media" }
   ],
   "nextSteps": ["string", "string", "string"],
+  "sugerencia_consultoria": "string (1–2 frases: la acción prioritaria que recomiendas al cliente según TODO lo anterior)",
   "solutionFlow": {
     "steps": [
       { "title": "string (máx ~24 caracteres)", "subtitle": "string (máx ~32 caracteres)" }
@@ -140,15 +162,17 @@ Responde SOLO con JSON válido (sin markdown), con esta forma exacta:
 }
 
 Reglas:
+- Basa el informe COMPLETO en los datos del cliente y en los metadatos de archivos adjuntos (nombres); no inventes contenido de archivos que no puedas ver.
 - Tono claro, profesional y cercano.
 - 3 a 4 recomendaciones máximo.
 - "nextSteps" exactamente 3 elementos, accionables.
+- "sugerencia_consultoria" obligatoria: la recomendación única más importante para empezar (debe sintetizar industria, problema, contexto y presupuesto si aplica).
 - "solutionFlow.steps" exactamente 4 pasos en orden lógico (ej. audiencia → presencia → interacción → valor/crecimiento), alineados con las recomendaciones y el sector del cliente.
 - Los títulos de los pasos deben reflejar ideas concretas del diagnóstico, no texto genérico vacío.
 - No inventes datos no provistos.`;
 }
 
-export async function fetchGeminiDiagnosis(prompt: string, apiKey: string): Promise<AIDiagnosis> {
+export async function fetchGeminiDiagnosis(prompt: string, apiKey: string): Promise<DiagnosisModelResult> {
   const model = "gemini-2.0-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -180,10 +204,13 @@ export async function fetchGeminiDiagnosis(prompt: string, apiKey: string): Prom
 
   const parsed = parseDiagnosisJson(text);
   if (!parsed) throw new Error("Gemini JSON format invalid.");
-  return parsed;
+  return {
+    diagnosis: { ...parsed, source: "gemini" },
+    rawResponseText: text,
+  };
 }
 
-export async function fetchOpenAIDiagnosis(prompt: string, apiKey: string): Promise<AIDiagnosis> {
+export async function fetchOpenAIDiagnosis(prompt: string, apiKey: string): Promise<DiagnosisModelResult> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -213,5 +240,8 @@ export async function fetchOpenAIDiagnosis(prompt: string, apiKey: string): Prom
 
   const parsed = parseDiagnosisJson(text);
   if (!parsed) throw new Error("OpenAI JSON format invalid.");
-  return parsed;
+  return {
+    diagnosis: { ...parsed, source: "openai" },
+    rawResponseText: text,
+  };
 }
