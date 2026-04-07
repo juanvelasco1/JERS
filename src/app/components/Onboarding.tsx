@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -591,10 +591,15 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(null);
 
   const STORAGE_KEY = "onboarding_submission_id_v1";
+  /** Refleja el id de fila en Supabase de forma síncrona (evita carreras tras insert antes del re-render). */
+  const onboardingSubmissionIdRef = useRef<string | null>(null);
   const [onboardingSubmissionId, setOnboardingSubmissionId] = useState<string | null>(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY);
+      const v = localStorage.getItem(STORAGE_KEY);
+      onboardingSubmissionIdRef.current = v;
+      return v;
     } catch {
+      onboardingSubmissionIdRef.current = null;
       return null;
     }
   });
@@ -672,7 +677,9 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     try {
       setIsSaving(true);
 
-      if (!onboardingSubmissionId) {
+      const activeId = onboardingSubmissionIdRef.current;
+
+      if (!activeId) {
         const insert = await supabase
           .from("onboarding_submissions")
           .insert(saveData)
@@ -682,8 +689,10 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         if (insert.error) throw insert.error;
 
         const newId = insert.data.id as string;
+        onboardingSubmissionIdRef.current = newId;
         setOnboardingSubmissionId(newId);
         if (payload.clearLocalStorageOnSuccess) {
+          onboardingSubmissionIdRef.current = null;
           setOnboardingSubmissionId(null);
         }
         return payload.clearLocalStorageOnSuccess ? null : newId;
@@ -691,13 +700,14 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         const update = await supabase
           .from("onboarding_submissions")
           .update(saveData)
-          .eq("id", onboardingSubmissionId);
+          .eq("id", activeId);
 
         if (update.error) throw update.error;
         if (payload.clearLocalStorageOnSuccess) {
+          onboardingSubmissionIdRef.current = null;
           setOnboardingSubmissionId(null);
         }
-        return payload.clearLocalStorageOnSuccess ? null : onboardingSubmissionId;
+        return payload.clearLocalStorageOnSuccess ? null : activeId;
       }
     } catch (err) {
       console.error("Failed to persist onboarding answers:", err);
@@ -808,12 +818,22 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     promptsSnapshot: string[],
     rawResponseText?: string,
   ) => {
+    const problemaCombined =
+      answersSnapshot.problema?.trim()
+      || [...promptsSnapshot, extraDetail].filter(Boolean).join("; ");
+
     await persistOnboarding({
       current_step: total,
       completed_at: new Date().toISOString(),
+      empresa: answersSnapshot.empresa?.trim() || null,
+      industria: answersSnapshot.industria?.trim() || null,
+      industria_otro: answersSnapshot.industria_otro?.trim() || null,
+      tamano: answersSnapshot["tamaño"]?.trim() || null,
+      problema: problemaCombined || null,
+      presupuesto: answersSnapshot.presupuesto?.trim() || null,
       answers_raw: buildAnswersRaw({
         ...answersSnapshot,
-        problema: answersSnapshot.problema || [...promptsSnapshot, extraDetail].filter(Boolean).join("; "),
+        problema: problemaCombined,
         ai_diagnosis: diagnosis,
         ...(contextoArchivosMeta.length > 0 ? { contexto_archivos: contextoArchivosMeta } : {}),
         ...(diagnosis.source === "gemini" && rawResponseText
@@ -989,22 +1009,25 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       payloadFields.presupuesto = val;
     }
 
-    void persistOnboarding({
-      current_step: nextStepNumber,
-      completed_at: isLastStep ? new Date().toISOString() : null,
-      ...payloadFields,
-      answers_raw: buildAnswersRaw(answersOverrides),
-      clearLocalStorageOnSuccess: isLastStep,
-    });
+    void (async () => {
+      // No limpiar el id aquí: el último paso debe seguir enlazado a la misma fila hasta guardar el diagnóstico.
+      await persistOnboarding({
+        current_step: nextStepNumber,
+        completed_at: isLastStep ? new Date().toISOString() : null,
+        ...payloadFields,
+        answers_raw: buildAnswersRaw(answersOverrides),
+        clearLocalStorageOnSuccess: false,
+      });
 
-    setTimeout(() => {
-      setDirection(1);
-      if (currentStep < total - 1) {
-        setCurrentStep((s) => s + 1);
-      } else {
-        startProcessing();
-      }
-    }, 350);
+      setTimeout(() => {
+        setDirection(1);
+        if (currentStep < total - 1) {
+          setCurrentStep((s) => s + 1);
+        } else {
+          startProcessing();
+        }
+      }, 350);
+    })();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
