@@ -83,27 +83,44 @@ async function run() {
     await page.screenshot({ path: path.join(artifactsDir, "01-home.png"), fullPage: true });
 
     await clickButtonByText("Comienza tu diagnóstico");
-    await page.waitForSelector("text/Paso 1 de 5");
+    await page.waitForSelector("text/Paso 1 de 6");
     await page.screenshot({ path: path.join(artifactsDir, "02-step1.png"), fullPage: true });
 
     await page.type('input[placeholder*="Panadería"]', empresa);
     await clickButtonByText("Continuar");
 
-    await page.waitForSelector("text/Paso 2 de 5");
+    await page.waitForSelector("text/Paso 2 de 6");
     await clickButtonByText("Servicios");
 
-    await page.waitForSelector("text/Paso 3 de 5");
+    await page.waitForSelector("text/Paso 3 de 6");
     await clickButtonByText("2 — 10 personas");
 
-    await page.waitForSelector("text/Paso 4 de 5");
+    await page.waitForSelector("text/Paso 4 de 6");
     await clickButtonByText("Me cuesta conseguir clientes");
     await page.type("textarea", problemaExtra);
     await clickButtonByText("Continuar");
 
-    await page.waitForSelector("text/Paso 5 de 5");
+    await page.waitForSelector("text/Paso 5 de 6");
+    await clickButtonByText("Ya tengo algo");
+    const contextoInputs = await page.$$("textarea");
+    const contextoTa = contextoInputs[contextoInputs.length - 1];
+    if (contextoTa) {
+      await contextoTa.type(" Contexto QA: sitio en WordPress");
+    }
+    await clickButtonByText("Continuar");
+
+    await page.waitForSelector("text/Paso 6 de 6");
     await clickButtonByText("$5,000 — $20,000");
 
     await page.waitForSelector("text/Tu diagnóstico está listo", { timeout: 30000 });
+    await page.waitForSelector("text/FLUJO DE LA SOLUCIÓN PROPUESTA", { timeout: 10000 });
+    const calHref = await page.$eval(
+      'a[href*="cal.com/monitor-jers"]',
+      (el) => el.getAttribute("href"),
+    );
+    if (!calHref?.includes("monitor-jers-zrnnsq/30min")) {
+      throw new Error(`Expected Cal.com 30min link, got: ${calHref}`);
+    }
     await page.screenshot({ path: path.join(artifactsDir, "03-results.png"), fullPage: true });
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -128,6 +145,11 @@ async function run() {
     if (!aiDiagnosis || typeof aiDiagnosis.summary !== "string" || !Array.isArray(aiDiagnosis.recommendations)) {
       fs.writeFileSync(path.join(artifactsDir, "browser-logs.txt"), browserLogs.join("\n"));
       throw new Error("Supabase row found, but answers_raw.ai_diagnosis is missing or invalid.");
+    }
+
+    if (data?.answers_raw?.contexto_actual !== "ya_tengo") {
+      fs.writeFileSync(path.join(artifactsDir, "browser-logs.txt"), browserLogs.join("\n"));
+      throw new Error(`Expected answers_raw.contexto_actual ya_tengo, got ${data?.answers_raw?.contexto_actual}`);
     }
 
     const summary = {

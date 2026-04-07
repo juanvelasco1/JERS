@@ -2,7 +2,103 @@
 import { useEffect, useMemo, useState } from "react";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  type ContextoArchivoMeta,
+  isValidContextoActual,
+  sanitizeStorageFileName,
+} from "@/app/lib/onboardingContexto";
+import { CheckCircle2, ChevronsRight, Globe2, User } from "lucide-react";
+import { JERS_CAL_30MIN_BOOKING_URL } from "@/app/lib/jersBooking";
+import {
+  type AIDiagnosis,
+  type SolutionFlowData,
+  buildDiagnosisUserPrompt,
+  buildFallbackSolutionFlow,
+  fetchGeminiDiagnosis,
+  fetchOpenAIDiagnosis,
+} from "@/app/lib/diagnosisAi";
+
+const FLOW_ICONS = [User, Globe2, ChevronsRight, CheckCircle2] as const;
+const FLOW_RING = [
+  "bg-blue-600 text-white shadow-sm rounded-full",
+  "bg-blue-600 text-white shadow-sm rounded-xl",
+  "bg-blue-600 text-white shadow-sm rounded-xl",
+  "bg-emerald-500 text-white shadow-sm rounded-full",
+] as const;
+
+/* ════════════════════════════════════════════════
+   Diagnosis: proposed solution flow (compact for modal)
+   ════════════════════════════════════════════════ */
+
+function SolutionFlowProposal({ flow }: { flow: SolutionFlowData }) {
+  const steps = flow.steps.slice(0, 4);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.82 }}
+      className="mt-2 shrink-0 rounded-xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/50 p-2.5 sm:p-3"
+    >
+      <p
+        className="text-[9px] sm:text-[10px] text-blue-600 mb-2 text-center sm:text-left"
+        style={{ fontWeight: 600, letterSpacing: "0.05em" }}
+      >
+        FLUJO DE LA SOLUCIÓN PROPUESTA
+      </p>
+
+      <div className="flex w-full items-start justify-between gap-0">
+        {steps.map((s, i) => {
+          const Icon = FLOW_ICONS[i] ?? User;
+          const ring = FLOW_RING[i] ?? FLOW_RING[0];
+          return (
+            <React.Fragment key={`${s.title}-${i}`}>
+              <div className="flex min-w-0 flex-[1_1_0] basis-0 flex-col items-center px-0.5 text-center">
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center sm:h-9 sm:w-9 ${ring}`}>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />
+                </div>
+                <p
+                  className="mt-1 w-full truncate text-[7px] leading-tight text-gray-800 sm:text-[8px]"
+                  style={{ fontWeight: 600 }}
+                  title={`${s.title} — ${s.subtitle}`}
+                >
+                  {s.title}
+                </p>
+                <p className="mt-0.5 line-clamp-2 w-full text-[6.5px] leading-snug text-gray-500 sm:text-[7px]">
+                  {s.subtitle}
+                </p>
+              </div>
+              {i < steps.length - 1 && (
+                <div
+                  className="flex shrink-0 items-center self-center px-0.5 pt-2 text-blue-300 sm:px-1"
+                  aria-hidden
+                >
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="opacity-75 sm:w-3 sm:h-[7px]">
+                    <path
+                      d="M0 3h6M6 0.5L9 3 6 5.5"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray="2 1.5"
+                    />
+                  </svg>
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 rounded-lg border border-blue-100/90 bg-blue-50/70 px-2 py-2 sm:px-2.5">
+        <p className="text-[9px] leading-snug text-gray-600 line-clamp-4 sm:text-[10px] sm:leading-relaxed sm:line-clamp-none">
+          {flow.narrative}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 /* ════════════════════════════════════════════════
    Right-side: Tips, illustrations & design assets
@@ -50,6 +146,16 @@ function TipPanel({ stepId }: { stepId: string }) {
         '"No sé si mi publicidad está funcionando"',
       ],
       stat: { number: "85%", label: "de los negocios tienen al menos 2 de estos retos" },
+    },
+    contexto_actual: {
+      tag: "CONTEXTO",
+      title: "Conocer tu punto de partida nos ayuda",
+      tips: [
+        "Si ya tienes algo desarrollado, podemos mejorarlo o integrarlo con nuevas piezas",
+        "Si tienes una idea clara, aceleramos el descubrimiento y el prototipo",
+        "Si empiezas de cero, te guiamos desde la estrategia hasta el lanzamiento",
+      ],
+      stat: { number: "60%", label: "de tiempo ahorrado cuando conocemos tu contexto inicial" },
     },
     presupuesto: {
       tag: "Transparencia",
@@ -215,6 +321,23 @@ function TipPanel({ stepId }: { stepId: string }) {
           </svg>
         )}
 
+        {stepId === "contexto_actual" && (
+          <svg width="100%" height="90" viewBox="0 0 280 90" fill="none" className="mx-auto max-w-[260px]">
+            <motion.rect x="45" y="22" width="52" height="44" rx="8" fill="#FEF3C7" stroke="#FCD34D" strokeWidth="1.5"
+              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25, type: "spring" }}
+            />
+            <motion.path d="M97 44H118" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round"
+              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.45 }}
+            />
+            <motion.rect x="118" y="22" width="52" height="44" rx="8" fill="#DBEAFE" stroke="#60A5FA" strokeWidth="1.5"
+              initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.35, type: "spring" }}
+            />
+            <motion.path d="M138 38L144 44L154 34" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.6, duration: 0.35 }}
+            />
+          </svg>
+        )}
+
         {stepId === "presupuesto" && (
           <svg width="100%" height="90" viewBox="0 0 280 90" fill="none" className="mx-auto max-w-[260px]">
             {/* Bar chart growing */}
@@ -359,6 +482,17 @@ const steps = [
     ],
   },
   {
+    id: "contexto_actual",
+    question: "¿Qué tienes actualmente?",
+    hint: "Nos ayuda a entender tu punto de partida.",
+    type: "contexto" as const,
+    options: [
+      { value: "ya_tengo", label: "Ya tengo algo", desc: "Mejorar o integrar" },
+      { value: "idea", label: "Tengo una idea", desc: "Acelerar el proceso" },
+      { value: "cero", label: "Empiezo de cero", desc: "Guiar desde el principio" },
+    ],
+  },
+  {
     id: "presupuesto",
     question: "¿Cuánto podrías invertir?",
     hint: "Solo es una referencia, puedes saltar esta pregunta.",
@@ -410,11 +544,35 @@ function getIndustriaLabel(val: string) {
   return map[val] || val;
 }
 
-type AIDiagnosis = {
-  summary: string;
-  recommendations: { area: string; desc: string; priority: "Alta" | "Media" }[];
-  nextSteps: string[];
-};
+function getContextoActualLabel(val: string) {
+  const map: Record<string, string> = {
+    ya_tengo: "Ya tengo algo",
+    idea: "Tengo una idea",
+    cero: "Empiezo de cero",
+  };
+  return map[val] || val || "No especificado";
+}
+
+async function uploadContextoArchivos(
+  client: SupabaseClient,
+  submissionId: string,
+  files: File[],
+): Promise<ContextoArchivoMeta[]> {
+  const uploaded: ContextoArchivoMeta[] = [];
+  for (const file of files) {
+    const safe = sanitizeStorageFileName(file.name);
+    const path = `${submissionId}/${Date.now()}-${safe}`;
+    const { error } = await client.storage.from("onboarding-attachments").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || "application/octet-stream",
+    });
+    if (error) throw error;
+    const { data: pub } = client.storage.from("onboarding-attachments").getPublicUrl(path);
+    uploaded.push({ path, name: file.name, size: file.size, url: pub.publicUrl });
+  }
+  return uploaded;
+}
 
 /* ════════════════════════════════════════════════
    Main Onboarding Component
@@ -424,6 +582,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<Record<string, string>>({});
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
   const [extraDetail, setExtraDetail] = useState("");
+  const [contextoFiles, setContextoFiles] = useState<File[]>([]);
+  const [contextoArchivosMeta, setContextoArchivosMeta] = useState<ContextoArchivoMeta[]>([]);
   const [otroText, setOtroText] = useState("");
   const [phase, setPhase] = useState<"form" | "processing" | "results">("form");
   const [direction, setDirection] = useState(1);
@@ -485,10 +645,10 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     presupuesto?: string | null;
     answers_raw: Record<string, unknown>;
     clearLocalStorageOnSuccess?: boolean;
-  }) => {
+  }): Promise<string | null> => {
     if (!supabase) {
       console.warn("Supabase env vars missing; skipping persistence.");
-      return;
+      return null;
     }
 
     const saveData: Record<string, unknown> = {
@@ -521,7 +681,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
         if (insert.error) throw insert.error;
 
-        setOnboardingSubmissionId(insert.data.id);
+        const newId = insert.data.id as string;
+        setOnboardingSubmissionId(newId);
+        if (payload.clearLocalStorageOnSuccess) {
+          setOnboardingSubmissionId(null);
+        }
+        return payload.clearLocalStorageOnSuccess ? null : newId;
       } else {
         const update = await supabase
           .from("onboarding_submissions")
@@ -529,13 +694,14 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           .eq("id", onboardingSubmissionId);
 
         if (update.error) throw update.error;
-      }
-
-      if (payload.clearLocalStorageOnSuccess) {
-        setOnboardingSubmissionId(null);
+        if (payload.clearLocalStorageOnSuccess) {
+          setOnboardingSubmissionId(null);
+        }
+        return payload.clearLocalStorageOnSuccess ? null : onboardingSubmissionId;
       }
     } catch (err) {
       console.error("Failed to persist onboarding answers:", err);
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -543,6 +709,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
   const canContinue = () => {
     if (step.type === "problema") return selectedPrompts.length > 0 || extraDetail.trim().length > 0;
+    if (step.type === "contexto") return isValidContextoActual(value);
     if (step.optional) return true;
     return value.trim().length > 0;
   };
@@ -564,105 +731,38 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         "Revisamos juntos este diagnóstico",
         "Te enviamos una propuesta sin compromiso",
       ],
+      solutionFlow: buildFallbackSolutionFlow(fallbackRecs),
     };
   };
 
-  const parseAiJson = (raw: string): AIDiagnosis | null => {
-    const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    const candidate = jsonMatch ? jsonMatch[0] : cleaned;
-
-    try {
-      const parsed = JSON.parse(candidate) as Partial<AIDiagnosis>;
-      if (!parsed.summary || !Array.isArray(parsed.recommendations) || !Array.isArray(parsed.nextSteps)) return null;
-
-      const recommendations: AIDiagnosis["recommendations"] = parsed.recommendations
-        .filter((r) => r && typeof r.area === "string" && typeof r.desc === "string")
-        .slice(0, 4)
-        .map((r) => ({
-          area: r.area,
-          desc: r.desc,
-          priority: r.priority === "Alta" ? "Alta" : "Media",
-        }));
-
-      const nextSteps = parsed.nextSteps
-        .filter((stepText): stepText is string => typeof stepText === "string" && stepText.trim().length > 0)
-        .slice(0, 3);
-
-      if (!recommendations.length || !nextSteps.length) return null;
-      return { summary: parsed.summary, recommendations, nextSteps };
-    } catch {
-      return null;
-    }
-  };
-
   const generateDiagnosisWithAI = async (answers: Record<string, string>, prompts: string[]): Promise<AIDiagnosis> => {
-    const apiKey = (import.meta.env.VITE_OPENAI_API_KEY as string | undefined)
-      || (import.meta.env.OPENAI_API_KEY as string | undefined);
+    const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
+    const openaiKey =
+      ((import.meta.env.VITE_OPENAI_API_KEY as string | undefined)
+        || (import.meta.env.OPENAI_API_KEY as string | undefined))?.trim();
 
-    if (!apiKey) return buildFallbackDiagnosis(answers, prompts);
-
-    const prompt = `
-Genera un diagnóstico para una consultora digital en español.
-Responde SOLO con JSON válido, sin markdown, con esta forma exacta:
-{
-  "summary": "string",
-  "recommendations": [
-    { "area": "string", "desc": "string", "priority": "Alta|Media" }
-  ],
-  "nextSteps": ["string", "string", "string"]
-}
-
-Reglas:
-- Tono claro, profesional y cercano.
-- 3 a 4 recomendaciones máximo.
-- "nextSteps" exactamente 3 elementos, accionables.
-- No inventes datos no provistos.
-
-Datos del cliente:
-- Empresa: ${answers.empresa || "No especificado"}
-- Industria: ${getIndustriaLabel(answers.industria || "otro")}
-- Tamaño: ${answers["tamaño"] || "No especificado"}
-- Problema: ${answers.problema || "No especificado"}
-- Presupuesto: ${getInvestmentLabel(answers.presupuesto || "")}
-- Retos seleccionados: ${prompts.join(" | ") || "No especificado"}
-`.trim();
+    const prompt = buildDiagnosisUserPrompt([
+      "Genera un diagnóstico para una consultora digital en español.",
+      "",
+      "Datos del cliente:",
+      `- Empresa: ${answers.empresa || "No especificado"}`,
+      `- Industria: ${getIndustriaLabel(answers.industria || "otro")}`,
+      `- Tamaño: ${answers["tamaño"] || "No especificado"}`,
+      `- Problema: ${answers.problema || "No especificado"}`,
+      `- Presupuesto: ${getInvestmentLabel(answers.presupuesto || "")}`,
+      `- Retos seleccionados: ${prompts.join(" | ") || "No especificado"}`,
+      `- Punto de partida: ${getContextoActualLabel(answers.contexto_actual || "")}`,
+      `- Detalle de contexto: ${answers.contexto_detalle?.trim() || "No especificado"}`,
+    ]);
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "Eres un consultor digital. Devuelve solo JSON válido." },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7,
-          max_tokens: 800,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI HTTP ${response.status}: ${errorText}`);
-      }
-
-      const json = await response.json();
-      const text = json?.choices?.[0]?.message?.content as string | undefined;
-      if (!text) throw new Error("OpenAI response did not include text.");
-
-      const parsed = parseAiJson(text);
-      if (!parsed) throw new Error("OpenAI JSON format invalid.");
-      return parsed;
+      if (geminiKey) return await fetchGeminiDiagnosis(prompt, geminiKey);
+      if (openaiKey) return await fetchOpenAIDiagnosis(prompt, openaiKey);
     } catch (err) {
       console.error("AI diagnosis failed, using fallback:", err);
-      return buildFallbackDiagnosis(answers, prompts);
     }
+
+    return buildFallbackDiagnosis(answers, prompts);
   };
 
   const runProcessingAnimation = () =>
@@ -687,6 +787,7 @@ Datos del cliente:
         ...answersSnapshot,
         problema: answersSnapshot.problema || [...promptsSnapshot, extraDetail].filter(Boolean).join("; "),
         ai_diagnosis: diagnosis,
+        ...(contextoArchivosMeta.length > 0 ? { contexto_archivos: contextoArchivosMeta } : {}),
       }),
       clearLocalStorageOnSuccess: true,
     });
@@ -714,6 +815,46 @@ Datos del cliente:
   const goNext = async () => {
     const isLastStep = currentStep >= total - 1;
     const nextStepNumber = isLastStep ? total : Math.min(currentStep + 2, total);
+
+    if (step.id === "contexto_actual") {
+      const detalle = data.contexto_detalle?.trim() || "";
+      const baseOverrides: Record<string, unknown> = {
+        contexto_actual: data.contexto_actual,
+        contexto_detalle: detalle,
+      };
+
+      const sid = await persistOnboarding({
+        current_step: nextStepNumber,
+        completed_at: isLastStep ? new Date().toISOString() : null,
+        answers_raw: buildAnswersRaw(baseOverrides),
+        clearLocalStorageOnSuccess: false,
+      });
+
+      let archivos: ContextoArchivoMeta[] = [];
+      if (contextoFiles.length > 0 && supabase && sid) {
+        try {
+          archivos = await uploadContextoArchivos(supabase, sid, contextoFiles);
+          setContextoArchivosMeta(archivos);
+        } catch (e) {
+          console.error("Contexto file upload failed:", e);
+        }
+        await persistOnboarding({
+          current_step: nextStepNumber,
+          completed_at: isLastStep ? new Date().toISOString() : null,
+          answers_raw: buildAnswersRaw({ ...baseOverrides, contexto_archivos: archivos }),
+          clearLocalStorageOnSuccess: false,
+        });
+      }
+      setContextoFiles([]);
+
+      if (currentStep < total - 1) {
+        setDirection(1);
+        setCurrentStep((s) => s + 1);
+      } else {
+        startProcessing();
+      }
+      return;
+    }
 
     // Step-specific fields to store in Supabase.
     let fields: {
@@ -776,6 +917,11 @@ Datos del cliente:
     if (val === "otro" && step.id === "industria") {
       setData({ ...data, [step.id]: val });
       return; // Don't auto-advance, let user type
+    }
+
+    if (step.id === "contexto_actual") {
+      setData({ ...data, [step.id]: val });
+      return;
     }
 
     setData({ ...data, [step.id]: val });
@@ -852,6 +998,9 @@ Datos del cliente:
     "Te enviamos una propuesta sin compromiso",
   ];
 
+  const solutionFlowForUi: SolutionFlowData =
+    aiDiagnosis?.solutionFlow ?? buildFallbackSolutionFlow(recommendations);
+
   return (
     <div className="flex flex-col h-full">
       {/* Main split content */}
@@ -901,9 +1050,20 @@ Datos del cliente:
             </div>
           </div>
 
-          {/* Form content */}
-          <div className="flex-1 flex flex-col justify-center px-6 sm:px-10">
-            <div className={`w-full mx-auto py-4 sm:py-6 ${phase === "results" ? "max-w-2xl" : "max-w-sm"}`} onKeyDown={handleKeyDown}>
+          {/* Form content — results scroll inside fixed-height modal */}
+          <div
+            className={`flex min-h-0 flex-1 flex-col px-6 sm:px-10 ${
+              phase === "results" ? "overflow-hidden pt-1" : "justify-center overflow-hidden"
+            }`}
+          >
+            <div
+              className={`mx-auto w-full min-h-0 ${
+                phase === "results"
+                  ? "max-h-full flex-1 overflow-y-auto overscroll-contain py-2 pb-3 max-w-2xl [scrollbar-width:thin]"
+                  : `py-4 sm:py-6 ${phase === "form" ? "max-w-sm" : "max-w-sm"}`
+              }`}
+              onKeyDown={handleKeyDown}
+            >
               <AnimatePresence mode="wait" custom={direction}>
                 {/* ─── FORM ─── */}
                 {phase === "form" && (
@@ -1053,6 +1213,65 @@ Datos del cliente:
                         </motion.div>
                       </div>
                     )}
+
+                    {step.type === "contexto" && step.options && (
+                      <div>
+                        <div className="space-y-2 mb-4">
+                          {step.options.map((opt, i) => {
+                            const selected = value === opt.value;
+                            return (
+                              <motion.button
+                                key={opt.value}
+                                type="button"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                onClick={() => handleCardSelect(opt.value)}
+                                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer border ${
+                                  selected
+                                    ? "bg-blue-600 border-blue-600 shadow-[0_2px_16px_rgba(37,99,235,0.2)]"
+                                    : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm"
+                                }`}
+                              >
+                                <span className={`text-[14px] block ${selected ? "text-white" : "text-gray-800"}`} style={{ fontWeight: 600 }}>
+                                  {opt.label}
+                                </span>
+                                <span className={`text-[12px] block mt-0.5 ${selected ? "text-blue-100" : "text-gray-400"}`}>
+                                  {opt.desc}
+                                </span>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mb-4">
+                          <p className="text-[12px] text-gray-500 mb-1.5">Cuéntanos qué tienes</p>
+                          <textarea
+                            rows={3}
+                            value={data.contexto_detalle || ""}
+                            onChange={(e) => setData({ ...data, contexto_detalle: e.target.value })}
+                            placeholder="Describe brevemente sitio web, redes, sistemas que usas..."
+                            className="w-full bg-white border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-50 rounded-xl outline-none text-[13px] text-gray-900 p-3 transition-all placeholder:text-gray-300 resize-none"
+                          />
+                        </motion.div>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
+                          <p className="text-[12px] text-gray-500 mb-1.5">Archivos opcionales (diseños, wireframes, etc.)</p>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*,.pdf,.doc,.docx,.zip,.ppt,.pptx,.txt"
+                            onChange={(e) => setContextoFiles(Array.from(e.target.files || []))}
+                            className="w-full text-[13px] text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[12px] file:bg-blue-50 file:text-blue-700 file:font-medium cursor-pointer"
+                          />
+                          {contextoFiles.length > 0 && (
+                            <ul className="mt-2 space-y-1 text-[11px] text-gray-500">
+                              {contextoFiles.map((f, i) => (
+                                <li key={`${f.name}-${i}-${f.size}`}>{f.name}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </motion.div>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
@@ -1141,39 +1360,39 @@ Datos del cliente:
                     className="w-full"
                   >
                     {/* Header */}
-                    <div className="flex items-center gap-3 mb-5">
+                    <div className="flex items-center gap-3 mb-3 shrink-0">
                       
                       <div>
-                        <h2 className="text-[18px] text-gray-900" style={{ fontWeight: 700 }}>
+                        <h2 className="text-[17px] text-gray-900 leading-tight" style={{ fontWeight: 700 }}>
                           Tu diagnóstico está listo
                         </h2>
-                        <p className="text-[12px] text-gray-400">
+                        <p className="text-[11px] text-gray-400 truncate">
                           {data.empresa || "Tu empresa"} — {getIndustriaLabel(data.industria)}
                         </p>
                       </div>
                     </div>
 
                     {/* Bento Grid */}
-                    <div className="grid grid-cols-3 gap-2.5 mb-4">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
                       {/* Row 1: Summary (span 2) + Investment (span 1) */}
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="col-span-2 bg-white rounded-xl p-4 border border-gray-100"
+                        className="col-span-2 bg-white rounded-xl p-3 border border-gray-100"
                       >
-                        <p className="text-[10px] text-blue-500 mb-1.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>RESUMEN</p>
-                        <p className="text-[12px] text-gray-600 leading-relaxed">{summaryText}</p>
+                        <p className="text-[9px] text-blue-500 mb-1" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>RESUMEN</p>
+                        <p className="text-[11px] text-gray-600 leading-snug line-clamp-6 sm:line-clamp-[8]">{summaryText}</p>
                       </motion.div>
 
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.35 }}
-                        className="col-span-1 bg-blue-50 rounded-xl p-4 border border-blue-100 flex flex-col justify-between"
+                        className="col-span-1 bg-blue-50 rounded-xl p-3 border border-blue-100 flex flex-col justify-between min-h-0"
                       >
-                        <p className="text-[10px] text-blue-500 mb-1" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>INVERSIÓN</p>
-                        <p className="text-[16px] text-blue-700" style={{ fontWeight: 700 }}>
+                        <p className="text-[9px] text-blue-500 mb-0.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>INVERSIÓN</p>
+                        <p className="text-[14px] text-blue-700 leading-tight" style={{ fontWeight: 700 }}>
                           {getInvestmentLabel(data.presupuesto)}
                         </p>
                       </motion.div>
@@ -1185,17 +1404,17 @@ Datos del cliente:
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.4 + i * 0.08 }}
-                          className="col-span-1 bg-white rounded-xl p-3.5 border border-gray-100 flex flex-col"
+                          className="col-span-1 bg-white rounded-xl p-2.5 border border-gray-100 flex flex-col min-h-0"
                         >
-                          <span className={`text-[9px] px-2 py-0.5 rounded-full self-start mb-2 ${
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full self-start mb-1 ${
                             rec.priority === "Alta"
                               ? "bg-orange-50 text-orange-600 border border-orange-100"
                               : "bg-blue-50 text-blue-500 border border-blue-100"
                           }`} style={{ fontWeight: 600 }}>
                             {rec.priority}
                           </span>
-                          <h4 className="text-[13px] text-gray-900 mb-1" style={{ fontWeight: 600 }}>{rec.area}</h4>
-                          <p className="text-[11px] text-gray-500 leading-relaxed flex-1">{rec.desc}</p>
+                          <h4 className="text-[12px] text-gray-900 mb-0.5 leading-tight line-clamp-2" style={{ fontWeight: 600 }}>{rec.area}</h4>
+                          <p className="text-[10px] text-gray-500 leading-snug flex-1 line-clamp-4">{rec.desc}</p>
                         </motion.div>
                       ))}
 
@@ -1204,22 +1423,22 @@ Datos del cliente:
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.7 }}
-                        className="col-span-2 bg-white rounded-xl p-4 border border-gray-100"
+                        className="col-span-2 bg-white rounded-xl p-3 border border-gray-100"
                       >
-                        <p className="text-[10px] text-blue-500 mb-2.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>¿QUÉ SIGUE?</p>
-                        <div className="space-y-2">
+                        <p className="text-[9px] text-blue-500 mb-1.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>¿QUÉ SIGUE?</p>
+                        <div className="space-y-1.5">
                           {nextSteps.map((text, i) => (
                             <motion.div
                               key={`${i}-${text}`}
                               initial={{ opacity: 0, x: -6 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: 0.8 + i * 0.1 }}
-                              className="flex gap-2 items-center"
+                              className="flex gap-1.5 items-start"
                             >
-                              <span className="w-[18px] h-[18px] rounded-full bg-blue-600 text-white text-[9px] flex items-center justify-center shrink-0" style={{ fontWeight: 700 }}>
+                              <span className="w-[16px] h-[16px] rounded-full bg-blue-600 text-white text-[8px] flex items-center justify-center shrink-0 mt-0.5" style={{ fontWeight: 700 }}>
                                 {i + 1}
                               </span>
-                              <span className="text-[11px] text-gray-600">{text}</span>
+                              <span className="text-[10px] text-gray-600 leading-snug">{text}</span>
                             </motion.div>
                           ))}
                         </div>
@@ -1229,17 +1448,21 @@ Datos del cliente:
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.75 }}
-                        className="col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 flex flex-col justify-between text-white"
+                        className="col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-3 flex flex-col justify-between text-white min-h-0"
                       >
                         <p className="text-[10px] text-blue-200 mb-2" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>ACCIÓN</p>
                         <div>
-                          <button
-                            className="w-full bg-white text-blue-600 py-2 rounded-lg text-[12px] hover:bg-blue-50 transition-colors cursor-pointer mb-1.5"
+                          <a
+                            href={JERS_CAL_30MIN_BOOKING_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full bg-white text-blue-600 py-2 rounded-lg text-[12px] hover:bg-blue-50 transition-colors text-center mb-1.5"
                             style={{ fontWeight: 600 }}
                           >
                             Agendar llamada
-                          </button>
+                          </a>
                           <button
+                            type="button"
                             className="w-full text-blue-200 py-1 text-[10px] hover:text-white transition-colors cursor-pointer"
                             style={{ fontWeight: 500 }}
                           >
@@ -1249,12 +1472,14 @@ Datos del cliente:
                       </motion.div>
                     </div>
 
+                    <SolutionFlowProposal flow={solutionFlowForUi} />
+
                     {/* Bottom */}
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 1 }}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between mt-4"
                     >
                       <button
                         onClick={onClose}
@@ -1294,7 +1519,7 @@ Datos del cliente:
                       Saltar
                     </button>
                   )}
-                  {(step.type === "text" || step.type === "problema") && (
+                  {(step.type === "text" || step.type === "problema" || step.type === "contexto") && (
                     <button
                       onClick={() => void goNext()}
                       disabled={!canContinue() || isSaving}
