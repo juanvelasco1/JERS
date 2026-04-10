@@ -1065,8 +1065,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         {/* LEFT 65% — header, progress, form, buttons */}
         <div className="flex-[65] flex flex-col min-h-0">
           {/* Top bar */}
-          <div className="flex items-center justify-between px-6 sm:px-10 py-4">
-            <div className="flex items-center gap-3">
+          <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-4 sm:px-8 md:px-10 py-3 sm:py-4 min-w-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 border-b border-gray-100/80">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
               <button
                 onClick={onClose}
                 className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
@@ -1081,13 +1081,13 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                 </>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 justify-end">
               {phase === "form" && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto max-w-[min(100%,11rem)] sm:max-w-none py-0.5 pr-1 -mr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {steps.map((_, i) => (
                     <span
                       key={i}
-                      className={`w-5 h-5 rounded-full text-[10px] flex items-center justify-center transition-all duration-300 ${
+                      className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 rounded-full text-[9px] sm:text-[10px] flex items-center justify-center transition-all duration-300 ${
                         i < currentStep
                           ? "bg-blue-600 text-white"
                           : i === currentStep
@@ -1109,15 +1109,17 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
           {/* Form content — results scroll inside fixed-height modal */}
           <div
-            className={`flex min-h-0 flex-1 flex-col px-6 sm:px-10 ${
-              phase === "results" ? "overflow-hidden pt-1" : "justify-center overflow-hidden"
+            className={`flex min-h-0 flex-1 flex-col px-4 sm:px-8 md:px-10 ${
+              phase === "results"
+                ? "overflow-hidden pt-1"
+                : "justify-start sm:justify-center overflow-y-auto overscroll-contain pb-2 pt-2"
             }`}
           >
             <div
               className={`mx-auto w-full min-h-0 ${
                 phase === "results"
-                  ? "max-h-full flex-1 overflow-y-auto overscroll-contain py-2 pb-3 max-w-2xl [scrollbar-width:thin]"
-                  : `py-4 sm:py-6 ${phase === "form" ? "max-w-sm" : "max-w-sm"}`
+                  ? "max-h-full flex-1 overflow-y-auto overscroll-contain py-2 pb-3 w-full max-w-2xl [scrollbar-width:thin]"
+                  : `py-4 sm:py-6 w-full max-w-sm min-w-0 pb-4`
               }`}
               onKeyDown={handleKeyDown}
             >
@@ -1437,13 +1439,13 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                     </div>
 
                     {/* Bento Grid */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
                       {/* Row 1: Summary (span 2) + Investment (span 1) */}
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="col-span-2 bg-white rounded-xl p-3 border border-gray-100"
+                        className="col-span-1 sm:col-span-2 lg:col-span-2 bg-white rounded-xl p-3 border border-gray-100 min-w-0"
                       >
                         <p className="text-[9px] text-blue-500 mb-1" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>RESUMEN</p>
                         <p className="text-[11px] text-gray-600 leading-snug line-clamp-6 sm:line-clamp-[8]">{summaryText}</p>
@@ -1453,7 +1455,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.35 }}
-                        className="col-span-1 bg-blue-50 rounded-xl p-3 border border-blue-100 flex flex-col justify-between min-h-0"
+                        className="col-span-1 bg-blue-50 rounded-xl p-3 border border-blue-100 flex flex-col justify-between min-h-0 min-w-0"
                       >
                         <p className="text-[9px] text-blue-500 mb-0.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>INVERSIÓN</p>
                         <p className="text-[14px] text-blue-700 leading-tight" style={{ fontWeight: 700 }}>
@@ -1466,7 +1468,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.38 }}
-                          className="col-span-3 rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50/90 to-white p-3"
+                          className="col-span-1 sm:col-span-2 lg:col-span-3 rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50/90 to-white p-3 min-w-0"
                         >
                           <p
                             className="text-[9px] text-emerald-700 mb-1"
@@ -1485,7 +1487,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.4 + i * 0.08 }}
-                          className="col-span-1 bg-white rounded-xl p-2.5 border border-gray-100 flex flex-col min-h-0"
+                          className="col-span-1 bg-white rounded-xl p-2.5 border border-gray-100 flex flex-col min-h-0 min-w-0"
                         >
                           <span className={`text-[8px] px-1.5 py-0.5 rounded-full self-start mb-1 ${
                             rec.priority === "Alta"
@@ -1504,7 +1506,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.7 }}
-                        className="col-span-2 bg-white rounded-xl p-3 border border-gray-100"
+                        className="col-span-1 sm:col-span-2 lg:col-span-2 bg-white rounded-xl p-3 border border-gray-100 min-w-0"
                       >
                         <p className="text-[9px] text-blue-500 mb-1.5" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>¿QUÉ SIGUE?</p>
                         <div className="space-y-1.5">
@@ -1529,7 +1531,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.75 }}
-                        className="col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-3 flex flex-col justify-between text-white min-h-0"
+                        className="col-span-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-3 flex flex-col justify-between text-white min-h-0 min-w-0"
                       >
                         <p className="text-[10px] text-blue-200 mb-2" style={{ fontWeight: 600, letterSpacing: "0.04em" }}>ACCIÓN</p>
                         <div>
@@ -1560,16 +1562,16 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 1 }}
-                      className="flex items-center justify-between mt-4"
+                      className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between mt-4"
                     >
                       <button
                         onClick={onClose}
-                        className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                        className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer text-left"
                         style={{ fontWeight: 500 }}
                       >
                         ← Volver al inicio
                       </button>
-                      <p className="text-[10px] text-gray-300">
+                      <p className="text-[10px] text-gray-300 sm:text-right">
                         Sin compromiso — Tu información es confidencial.
                       </p>
                     </motion.div>
@@ -1581,16 +1583,16 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
 
           {/* Bottom nav */}
           {phase === "form" && (
-            <div className="px-6 sm:px-10 py-3.5">
-              <div className="flex items-center justify-between">
+            <div className="sticky bottom-0 z-20 px-4 sm:px-8 md:px-10 py-3 sm:py-3.5 shrink-0 border-t border-gray-100/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   onClick={currentStep === 0 ? onClose : goBack}
-                  className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors cursor-pointer px-4 py-2 rounded-lg hover:bg-gray-50"
+                  className="text-[13px] text-gray-500 hover:text-gray-700 transition-colors cursor-pointer px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-50 w-full sm:w-auto text-center sm:text-left"
                   style={{ fontWeight: 500 }}
                 >
                   {currentStep === 0 ? "Cancelar" : "Anterior"}
                 </button>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                   {step.optional && (
                     <button
                       onClick={() => void goNext()}

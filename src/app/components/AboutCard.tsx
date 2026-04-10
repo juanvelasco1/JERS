@@ -9,7 +9,7 @@ const reasons = [
 
 export function AboutCard({ onClose }: { onClose: () => void }) {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       {/* Header */}
       <div className="px-6 sm:px-8 py-4 flex items-center shrink-0">
         <button
@@ -22,7 +22,7 @@ export function AboutCard({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col justify-center py-5 sm:py-6 px-[40px] pt-[24px] pb-[64px]">
+      <div className="flex-1 flex flex-col justify-center min-h-0 overflow-y-auto overscroll-contain py-5 sm:py-6 px-4 sm:px-8 md:px-10 pt-6 pb-10 sm:pb-16">
         {/* Intro */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
