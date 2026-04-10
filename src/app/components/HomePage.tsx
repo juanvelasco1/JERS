@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ProcessAnimation } from "./ProcessAnimation";
 import { Onboarding } from "./Onboarding";
-import { ContactCard } from "./ContactCard";
 import { AboutCard } from "./AboutCard";
 
 /* ── Doodle decorator ── */
@@ -36,7 +35,7 @@ export function HomePage() {
 
   return (
     <>
-      <div className="min-h-[calc(100vh-64px)] pb-20 relative overflow-x-hidden flex flex-col">
+      <div className="min-h-[calc(100dvh-4rem)] pb-12 sm:pb-20 relative overflow-x-hidden flex flex-col w-full max-w-[100vw]">
         {/* Doodles */}
         <AnimatePresence>
           {!showOnboarding && !showContact && (
@@ -66,14 +65,14 @@ export function HomePage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -30, scale: 0.97, filter: "blur(6px)" }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-5xl mx-auto px-5 sm:px-6 pt-16 pb-4 text-left relative z-10"
+              className="max-w-5xl mx-auto w-full min-w-0 px-4 sm:px-6 pt-12 sm:pt-16 pb-4 text-left relative z-10"
             >
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-3xl sm:text-4xl md:text-[44px] text-gray-900 mb-4"
+                className="text-[1.65rem] sm:text-3xl md:text-4xl lg:text-[44px] text-gray-900 mb-4 text-balance"
                 style={{ fontWeight: 700, lineHeight: 1.15 }}
               >
                 Transformamos problemas en{" "}
@@ -84,7 +83,7 @@ export function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -14 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-[15px] text-gray-500 mb-6 max-w-lg"
+                className="text-[14px] sm:text-[15px] text-gray-500 mb-6 max-w-lg text-pretty"
               >
                 Analizamos, diseñamos y desarrollamos tu presencia digital de principio a fin.
               </motion.p>
@@ -93,11 +92,11 @@ export function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.4, delay: 0.35 }}
-                className="relative inline-flex items-center gap-3"
+                className="relative flex flex-col w-full min-w-0 sm:inline-flex sm:flex-row sm:w-auto items-stretch sm:items-center gap-3"
               >
                 <button
                   onClick={() => setShowOnboarding(true)}
-                  className="inline-block px-5 py-2.5 text-[13px] text-white rounded-lg bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] hover:shadow-[0_4px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                  className="inline-flex justify-center px-5 py-2.5 text-[13px] text-white rounded-lg bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] hover:shadow-[0_4px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                   style={{ fontWeight: 600 }}
                 >
                   Comienza tu diagnóstico
@@ -105,7 +104,7 @@ export function HomePage() {
                 <Link
                   to="#"
                   onClick={(e) => { e.preventDefault(); setShowContact(true); }}
-                  className="inline-block px-5 py-2.5 text-[13px] text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                  className="inline-flex justify-center px-5 py-2.5 text-[13px] text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-center"
                   style={{ fontWeight: 600 }}
                 >
                   Conócenos
@@ -128,7 +127,11 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="max-w-5xl w-full mx-auto px-4 mt-8 relative flex items-center justify-center flex-1"
+          className={`max-w-5xl w-full min-w-0 mx-auto px-3 sm:px-4 relative flex justify-center flex-1 min-h-0 ${
+            showOnboarding || showContact
+              ? "items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6"
+              : "items-center mt-6 sm:mt-8"
+          }`}
         >
           <AnimatePresence>
             {!showOnboarding && !showContact && (
@@ -153,7 +156,7 @@ export function HomePage() {
             )}
           </AnimatePresence>
 
-          <div className="rounded-2xl overflow-hidden shadow-lg w-full max-w-5xl">
+          <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full min-w-0 max-w-5xl">
             <AnimatePresence mode="wait">
               {!showOnboarding && !showContact ? (
                 <motion.div
@@ -170,8 +173,8 @@ export function HomePage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="bg-white border border-gray-100 w-full"
-                  style={{ height: "clamp(560px, calc(100dvh - 120px), 760px)" }}
+                  className="bg-white border border-gray-100 w-full min-h-0 max-h-[calc(100dvh_-_8.5rem)] lg:max-h-[calc(100dvh_-_7.5rem)] flex flex-col"
+                  style={{ height: "clamp(360px, calc(100dvh - 8.5rem), 760px)" }}
                 >
                   <Onboarding onClose={() => setShowOnboarding(false)} />
                 </motion.div>
@@ -182,8 +185,8 @@ export function HomePage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="bg-white border border-gray-100 w-full rounded-2xl"
-                  style={{ height: "clamp(560px, calc(100dvh - 120px), 760px)" }}
+                  className="bg-white border border-gray-100 w-full min-h-0 max-h-[calc(100dvh_-_8.5rem)] lg:max-h-[calc(100dvh_-_7.5rem)] rounded-xl sm:rounded-2xl flex flex-col"
+                  style={{ height: "clamp(360px, calc(100dvh - 8.5rem), 760px)" }}
                 >
                   <AboutCard onClose={() => setShowContact(false)} />
                 </motion.div>

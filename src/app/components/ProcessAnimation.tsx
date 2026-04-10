@@ -119,11 +119,11 @@ export function ProcessAnimation() {
   return (
     <div
       ref={ref}
-      className="w-full h-[240px] sm:h-[300px] md:h-[360px] bg-[#fafbfc] flex flex-col items-center justify-center relative overflow-hidden select-none"
+      className="w-full min-w-0 min-h-[280px] h-[280px] sm:min-h-[300px] sm:h-[300px] md:min-h-[360px] md:h-[360px] bg-[#fafbfc] flex flex-col items-center justify-center relative overflow-hidden select-none"
     >
       {/* Hand-drawn style wavy line connecting the journey */}
       <svg
-        className="absolute bottom-[52px] sm:bottom-[58px] left-0 w-full h-[40px] pointer-events-none"
+        className="absolute bottom-[56px] sm:bottom-[58px] md:bottom-[58px] left-0 w-full h-[36px] sm:h-[40px] pointer-events-none"
         viewBox="0 0 800 40"
         preserveAspectRatio="none"
       >
@@ -152,18 +152,17 @@ export function ProcessAnimation() {
       </svg>
 
       {/* Scenes */}
-      <div className="relative z-10 flex items-end justify-between w-full max-w-[720px] px-8 sm:px-6 gap-2">
+      <div className="relative z-10 flex items-end justify-between w-full max-w-[720px] px-2 sm:px-4 md:px-6 gap-0.5 sm:gap-2">
         {scenes.map((scene, i) => {
           const isCurrent = currentScene === i;
           const isPast = currentScene > i;
           const isFuture = currentScene < i;
 
           return (
-            <div key={scene.key} className="flex flex-col items-center w-1/4 overflow-visible">
+            <div key={scene.key} className="flex min-w-0 flex-1 flex-col items-center max-w-[25%] overflow-visible">
               {/* Scene illustration */}
               <motion.div
-                className="mb-2 relative overflow-hidden"
-                style={{ width: 72, height: 80 }}
+                className="mb-1 sm:mb-2 relative overflow-hidden w-[58px] h-[64px] sm:w-[68px] sm:h-[76px] md:w-[72px] md:h-[80px]"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{
                   opacity: isFuture && active >= 0 ? 0.15 : isPast ? 0.4 : isCurrent ? 1 : 0,
@@ -180,7 +179,7 @@ export function ProcessAnimation() {
 
               {/* Dot on the timeline */}
               <motion.div
-                className="w-3 h-3 rounded-full border-2 mb-4 sm:mb-5"
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 mb-3 sm:mb-4 md:mb-5 shrink-0"
                 animate={{
                   borderColor: isCurrent ? "#3b82f6" : isPast ? "#93c5fd" : "#d1d5db",
                   backgroundColor: isCurrent ? "#3b82f6" : isPast ? "#93c5fd" : "#fff",
@@ -191,14 +190,14 @@ export function ProcessAnimation() {
 
               {/* Label */}
               <motion.div
-                className="text-center"
+                className="text-center w-full min-w-0 px-0.5"
                 animate={{
                   opacity: isCurrent ? 1 : isPast ? 0.45 : 0.2,
                 }}
                 transition={{ duration: 0.4 }}
               >
                 <p
-                  className="text-[10px] sm:text-[12px] text-gray-800 whitespace-nowrap"
+                  className="text-[8px] leading-tight sm:text-[10px] md:text-[12px] text-gray-800 text-balance hyphens-auto line-clamp-2 sm:line-clamp-none sm:whitespace-normal"
                   style={{ fontWeight: isCurrent ? 600 : 400 }}
                 >
                   {scene.label}
@@ -209,7 +208,7 @@ export function ProcessAnimation() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="text-[9px] sm:text-[11px] text-gray-400 mt-0.5 whitespace-nowrap"
+                      className="text-[7px] leading-tight sm:text-[9px] md:text-[11px] text-gray-400 mt-0.5 text-balance line-clamp-2 sm:line-clamp-3"
                     >
                       {scene.sublabel}
                     </motion.p>

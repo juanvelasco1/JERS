@@ -9,9 +9,9 @@ export function Layout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FCFAF5]">
+    <div className="min-h-dvh min-h-screen flex flex-col bg-[#FCFAF5] w-full max-w-[100vw] overflow-x-hidden">
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      <main className="flex-1 pt-16">
+      <main className="flex-1 pt-16 min-h-0 min-w-0 w-full overflow-x-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -41,11 +41,11 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 bg-[#fcfaf5cc]">
-      <div className="w-full max-w-5xl mx-auto px-5 sm:px-6">
-        <div className="flex items-center justify-between h-12">
-          <Link to="/" className="flex items-center gap-1">
-            <span className="text-[15px]" style={{ fontWeight: 700 }}>JERS</span>
-            <span className="text-[15px] text-blue-600">Consultora Digital</span>
+      <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 min-w-0">
+        <div className="flex items-center justify-between h-12 gap-2 min-w-0">
+          <Link to="/" className="flex items-center gap-1 min-w-0 shrink">
+            <span className="text-sm sm:text-[15px] shrink-0" style={{ fontWeight: 700 }}>JERS</span>
+            <span className="text-sm sm:text-[15px] text-blue-600 truncate min-w-0">Consultora Digital</span>
           </Link>
 
           {/* Desktop Nav */}
