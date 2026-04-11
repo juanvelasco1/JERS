@@ -167,8 +167,12 @@ function Footer() {
           <div>
             <h4 className="text-[13px] text-gray-900 mb-4" style={{ fontWeight: 600 }}>Redes sociales</h4>
             <ul className="space-y-2">
-              {["Instagram", "Facebook", "LinkedIn"].map((item) => (
-                <li key={item}><a href="#" className="text-[12px] text-gray-500 hover:text-blue-600 transition-colors">{item}</a></li>
+              {[
+                { label: 'Instagram', href: 'https://www.instagram.com/consultora_jers?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==' },
+                { label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61581946824749&rdid=uMi7DUDw5VlKmtc0&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1NCyLJJYRQ%2F#' },
+                { label: 'LinkedIn', href: 'https://www.linkedin.com/company/jers-consultora-digital/' },
+              ].map((item) => (
+                <li key={item.label}><a href={item.href} target="_blank" rel="noreferrer" className="text-[12px] text-gray-500 hover:text-blue-600 transition-colors">{item.label}</a></li>
               ))}
             </ul>
           </div>
