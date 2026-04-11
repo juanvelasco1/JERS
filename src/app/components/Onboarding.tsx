@@ -1130,11 +1130,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-4 sm:px-8 md:px-10 py-3 sm:py-4 min-w-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 border-b border-gray-100/80">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
               <button
-                onClick={onClose}
+                type="button"
+                onClick={resetOnboarding}
                 className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 style={{ fontWeight: 500 }}
               >
-                ← Salir
+                Reiniciar diagnóstico
               </button>
               {phase === "form" && (
                 <>
@@ -1144,14 +1145,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 justify-end">
-              <button
-                type="button"
-                onClick={resetOnboarding}
-                className="hidden sm:inline-flex text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer px-2 py-1 rounded-md hover:bg-gray-50"
-                style={{ fontWeight: 500 }}
-              >
-                Reiniciar diagnóstico
-              </button>
               {phase === "form" && (
                 <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto max-w-[min(100%,11rem)] sm:max-w-none py-0.5 pr-1 -mr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {steps.map((_, i) => (
@@ -1170,9 +1163,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                     </span>
                   ))}
                 </div>
-              )}
-              {phase === "form" && (
-                null
               )}
             </div>
           </div>
