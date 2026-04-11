@@ -8,6 +8,13 @@ import {
   isValidContextoActual,
   sanitizeStorageFileName,
 } from "@/app/lib/onboardingContexto";
+import {
+  ONBOARDING_DRAFT_STORAGE_KEY,
+  clearOnboardingDraftStorage,
+  clampStepIndex,
+  readOnboardingDraft,
+  type OnboardingDraftV1,
+} from "@/app/lib/onboardingDraft";
 import { CheckCircle2, ChevronsRight, Globe2, User } from "lucide-react";
 import { JERS_CAL_30MIN_BOOKING_URL } from "@/app/lib/jersBooking";
 import {
@@ -578,17 +585,20 @@ async function uploadContextoArchivos(
    Main Onboarding Component
    ════════════════════════════════════════════════ */
 export function Onboarding({ onClose }: { onClose: () => void }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [data, setData] = useState<Record<string, string>>({});
-  const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
-  const [extraDetail, setExtraDetail] = useState("");
+  const initialDraft = useMemo(() => readOnboardingDraft(), []);
+  const total = steps.length;
+
+  const [currentStep, setCurrentStep] = useState(() => clampStepIndex(initialDraft?.currentStep ?? 0, total));
+  const [data, setData] = useState<Record<string, string>>(() => initialDraft?.data ?? {});
+  const [selectedPrompts, setSelectedPrompts] = useState<string[]>(() => initialDraft?.selectedPrompts ?? []);
+  const [extraDetail, setExtraDetail] = useState(() => initialDraft?.extraDetail ?? "");
   const [contextoFiles, setContextoFiles] = useState<File[]>([]);
-  const [contextoArchivosMeta, setContextoArchivosMeta] = useState<ContextoArchivoMeta[]>([]);
-  const [otroText, setOtroText] = useState("");
-  const [phase, setPhase] = useState<"form" | "processing" | "results">("form");
+  const [contextoArchivosMeta, setContextoArchivosMeta] = useState<ContextoArchivoMeta[]>(() => initialDraft?.contextoArchivosMeta ?? []);
+  const [otroText, setOtroText] = useState(() => initialDraft?.otroText ?? "");
+  const [phase, setPhase] = useState<"form" | "processing" | "results">(() => initialDraft?.phase ?? "form");
   const [direction, setDirection] = useState(1);
-  const [processingStep, setProcessingStep] = useState(0);
-  const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(null);
+  const [processingStep, setProcessingStep] = useState(() => initialDraft?.processingStep ?? 0);
+  const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(() => initialDraft?.aiDiagnosis ?? null);
 
   const STORAGE_KEY = "onboarding_submission_id_v1";
   /** Refleja el id de fila en Supabase de forma síncrona (evita carreras tras insert antes del re-render). */
@@ -630,9 +640,39 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     }
   }, [onboardingSubmissionId]);
 
-  const total = steps.length;
   const step = steps[currentStep];
   const value = data[step?.id] || "";
+
+  useEffect(() => {
+    try {
+      const draft: OnboardingDraftV1 = {
+        v: 1,
+        currentStep: clampStepIndex(currentStep, total),
+        data,
+        selectedPrompts,
+        extraDetail,
+        otroText,
+        phase: phase === "results" ? "results" : "form",
+        aiDiagnosis,
+        processingStep,
+        contextoArchivosMeta,
+      };
+      localStorage.setItem(ONBOARDING_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    aiDiagnosis,
+    contextoArchivosMeta,
+    currentStep,
+    data,
+    extraDetail,
+    otroText,
+    phase,
+    processingStep,
+    selectedPrompts,
+    total,
+  ]);
 
   const buildAnswersRaw = (overrides?: Record<string, unknown>) => {
     const base: Record<string, unknown> = { ...data };
@@ -866,6 +906,28 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     })();
   };
 
+  const resetOnboarding = () => {
+    const shouldReset = window.confirm(
+      "¿Seguro que deseas reiniciar el diagnóstico? Se perderá el avance guardado.",
+    );
+    if (!shouldReset) return;
+
+    clearOnboardingDraftStorage();
+    setCurrentStep(0);
+    setData({});
+    setSelectedPrompts([]);
+    setExtraDetail("");
+    setContextoFiles([]);
+    setContextoArchivosMeta([]);
+    setOtroText("");
+    setPhase("form");
+    setDirection(1);
+    setProcessingStep(0);
+    setAiDiagnosis(null);
+    onboardingSubmissionIdRef.current = null;
+    setOnboardingSubmissionId(null);
+  };
+
   const goNext = async () => {
     const isLastStep = currentStep >= total - 1;
     const nextStepNumber = isLastStep ? total : Math.min(currentStep + 2, total);
@@ -1082,6 +1144,14 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 justify-end">
+              <button
+                type="button"
+                onClick={resetOnboarding}
+                className="hidden sm:inline-flex text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer px-2 py-1 rounded-md hover:bg-gray-50"
+                style={{ fontWeight: 500 }}
+              >
+                Reiniciar diagnóstico
+              </button>
               {phase === "form" && (
                 <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto max-w-[min(100%,11rem)] sm:max-w-none py-0.5 pr-1 -mr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {steps.map((_, i) => (
@@ -1123,6 +1193,14 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
               }`}
               onKeyDown={handleKeyDown}
             >
+              <button
+                type="button"
+                onClick={resetOnboarding}
+                className="sm:hidden inline-flex mb-3 text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer px-2 py-1 rounded-md hover:bg-gray-50"
+                style={{ fontWeight: 500 }}
+              >
+                Reiniciar diagnóstico
+              </button>
               <AnimatePresence mode="wait" custom={direction}>
                 {/* ─── FORM ─── */}
                 {phase === "form" && (
