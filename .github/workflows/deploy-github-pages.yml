@@ -17,6 +17,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Si las variables VITE_SUPABASE_* están solo en Settings → Environments → github-pages,
+    # este job debe usar ese entorno o el build queda sin Supabase (Storage no sube en Pages).
+    # Si el workflow se queda “esperando aprobación” o falla por rama, en ese entorno añade la
+    # rama `main` en “Deployment branches”, o mueve las variables a “Repository secrets”.
+    environment: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4

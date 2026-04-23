@@ -624,10 +624,11 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [isSaving, setIsSaving] = useState(false);
 
   const supabase = useMemo(() => {
-    const projectId = import.meta.env.VITE_PROJECT_ID as string | undefined;
-    const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
+    const projectId = (import.meta.env.VITE_PROJECT_ID as string | undefined)?.trim();
+    const url =
+      (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
       || (projectId ? `https://${projectId}.supabase.co` : undefined);
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+    const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
     if (!url || !key) return null;
 
     return createClient(url, key, {
