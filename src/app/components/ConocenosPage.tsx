@@ -495,18 +495,11 @@ export function ConocenosPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                to="/contacto"
-                className="inline-flex justify-center items-center rounded-2xl px-6 py-3 text-[14px] text-white transition-opacity hover:opacity-95"
+                to="/?diagnostico=true"
+                className="inline-flex justify-center items-center rounded-2xl px-7 py-3.5 text-[14px] text-white transition-opacity hover:opacity-95"
                 style={{ background: BRAND, fontWeight: 700 }}
               >
-                Contáctanos
-              </Link>
-              <Link
-                to="/contacto"
-                className="inline-flex justify-center items-center rounded-2xl px-6 py-3 text-[14px] border border-white/35 text-white hover:bg-white/5 transition-colors"
-                style={{ fontWeight: 600 }}
-              >
-                Agenda una reunión
+                Agendar una cita
               </Link>
             </div>
           </div>
