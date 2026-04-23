@@ -16,7 +16,8 @@ build
 .vscode
 
 .cursor
-.cursorignore
+
+
 e2e-artifacts 
 
 

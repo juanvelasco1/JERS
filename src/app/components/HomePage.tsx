@@ -1,9 +1,13 @@
 import { Link, useSearchParams } from "react-router";
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Loader2 } from "lucide-react";
 import { ProcessAnimation } from "./ProcessAnimation";
-import { Onboarding } from "./Onboarding";
 import { AboutCard } from "./AboutCard";
+
+const Onboarding = lazy(() =>
+  import("./Onboarding").then((m) => ({ default: m.Onboarding })),
+);
 
 /* ── Doodle decorator ── */
 function Doodle({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -176,7 +180,16 @@ export function HomePage() {
                   className="bg-white border border-gray-100 w-full min-h-0 max-h-[calc(100dvh_-_8.5rem)] lg:max-h-[calc(100dvh_-_7.5rem)] flex flex-col"
                   style={{ height: "clamp(360px, calc(100dvh - 8.5rem), 760px)" }}
                 >
-                  <Onboarding onClose={() => setShowOnboarding(false)} />
+                  <Suspense
+                    fallback={
+                      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-[13px] text-gray-500">
+                        <Loader2 className="h-7 w-7 animate-spin text-blue-600" aria-hidden />
+                        <span>Cargando diagnóstico…</span>
+                      </div>
+                    }
+                  >
+                    <Onboarding onClose={() => setShowOnboarding(false)} />
+                  </Suspense>
                 </motion.div>
               ) : (
                 <motion.div

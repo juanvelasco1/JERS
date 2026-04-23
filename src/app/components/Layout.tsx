@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Loader2, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex min-h-[40vh] w-full items-center justify-center px-4">
+      <div className="flex items-center gap-2 text-[13px] text-gray-500">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-blue-600" aria-hidden />
+        Cargando…
+      </div>
+    </div>
+  );
+}
 
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -20,7 +31,9 @@ export function Layout() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
           >
-            <Outlet />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Outlet />
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

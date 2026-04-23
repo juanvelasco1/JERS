@@ -122,8 +122,8 @@ async function run() {
   console.log("update ok");
 
   const tiny = new Blob([runId], { type: "text/plain" });
-  const storagePath = `${id}/verify-${Date.now()}.txt`;
-  const up = await anon.storage.from("onboarding-attachments").upload(storagePath, tiny, {
+  const storagePath = `${id}/uploads/verify-${Date.now()}.txt`;
+  const up = await anon.storage.from("diagnostico-clientes").upload(storagePath, tiny, {
     contentType: "text/plain",
     upsert: false,
   });
@@ -134,7 +134,7 @@ async function run() {
     const admin = createClient(url, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    await admin.storage.from("onboarding-attachments").remove([storagePath]);
+    await admin.storage.from("diagnostico-clientes").remove([storagePath]);
     const del = await admin.from("onboarding_submissions").delete().eq("id", id);
     if (del.error) throw new Error(`delete row: ${del.error.message}`);
     console.log("cleanup ok (service role): row + file removed");

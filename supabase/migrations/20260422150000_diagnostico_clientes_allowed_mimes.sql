@@ -1,0 +1,35 @@
+-- Tipos permitidos en Storage (documentos, imágenes, hojas, presentaciones, zip, texto). Sin vídeo.
+update storage.buckets
+set allowed_mime_types = array[
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+  'image/tiff',
+  'image/x-icon',
+  'image/heic',
+  'image/heif',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-word.document.macroenabled.12',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel.sheet.macroenabled.12',
+  'text/csv',
+  'application/csv',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-powerpoint.presentation.macroenabled.12',
+  'text/plain',
+  'application/rtf',
+  'text/rtf',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/zip',
+  'application/x-zip-compressed'
+]::text[]
+where id = 'diagnostico-clientes';

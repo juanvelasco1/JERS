@@ -8,11 +8,15 @@ describe("Supabase migrations (schema as in previous project)", () => {
   it("defines onboarding_submissions table, RLS, and storage bucket", () => {
     const table = join(migrationsDir, "20260319195316_create_onboarding_submissions_table.sql");
     const rls = join(migrationsDir, "20260319210000_enable_rls_onboarding_submissions.sql");
-    const storage = join(migrationsDir, "20260319220000_onboarding_attachments_bucket.sql");
+    const storageLegacy = join(migrationsDir, "20260319220000_onboarding_attachments_bucket.sql");
+    const storageClientes = join(migrationsDir, "20260422120000_diagnostico_clientes_storage.sql");
+    const storageMimes = join(migrationsDir, "20260422150000_diagnostico_clientes_allowed_mimes.sql");
 
     expect(existsSync(table)).toBe(true);
     expect(existsSync(rls)).toBe(true);
-    expect(existsSync(storage)).toBe(true);
+    expect(existsSync(storageLegacy)).toBe(true);
+    expect(existsSync(storageClientes)).toBe(true);
+    expect(existsSync(storageMimes)).toBe(true);
 
     const t = readFileSync(table, "utf8");
     expect(t).toContain("onboarding_submissions");
@@ -22,8 +26,18 @@ describe("Supabase migrations (schema as in previous project)", () => {
     expect(r).toContain("row level security");
     expect(r).toContain("onboarding_submissions_anon_insert");
 
-    const s = readFileSync(storage, "utf8");
-    expect(s).toContain("onboarding-attachments");
-    expect(s).toContain("storage.objects");
+    const sLegacy = readFileSync(storageLegacy, "utf8");
+    expect(sLegacy).toContain("onboarding-attachments");
+    expect(sLegacy).toContain("storage.objects");
+
+    const sClientes = readFileSync(storageClientes, "utf8");
+    expect(sClientes).toContain("diagnostico-clientes");
+    expect(sClientes).toContain("onboarding_submissions");
+    expect(sClientes).toContain("storage.foldername(name)");
+
+    const sMimes = readFileSync(storageMimes, "utf8");
+    expect(sMimes).toContain("allowed_mime_types");
+    expect(sMimes).toContain("application/pdf");
+    expect(sMimes).not.toMatch(/video\//);
   });
 });

@@ -8,6 +8,16 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
   },
+  /** Acelera el primer arranque de `vite` al pre-empaquetar dependencias pesadas. */
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router",
+      "motion/react",
+      "lucide-react",
+    ],
+  },
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them

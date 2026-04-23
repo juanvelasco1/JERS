@@ -6,8 +6,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   type ContextoArchivoMeta,
   isValidContextoActual,
-  sanitizeStorageFileName,
 } from "@/app/lib/onboardingContexto";
+import {
+  partitionDiagnosticoArchivos,
+  resolveDiagnosticoUploadContentType,
+} from "@/app/lib/diagnosticoArchivos";
+import {
+  DIAGNOSTICO_CLIENTES_BUCKET,
+  buildDiagnosticoClienteObjectPath,
+} from "@/app/lib/diagnosticoStorage";
 import {
   ONBOARDING_DRAFT_STORAGE_KEY,
   clearOnboardingDraftStorage,
@@ -567,15 +574,15 @@ async function uploadContextoArchivos(
 ): Promise<ContextoArchivoMeta[]> {
   const uploaded: ContextoArchivoMeta[] = [];
   for (const file of files) {
-    const safe = sanitizeStorageFileName(file.name);
-    const path = `${submissionId}/${Date.now()}-${safe}`;
-    const { error } = await client.storage.from("onboarding-attachments").upload(path, file, {
+    const path = buildDiagnosticoClienteObjectPath(submissionId, file.name);
+    const contentType = resolveDiagnosticoUploadContentType(file);
+    const { error } = await client.storage.from(DIAGNOSTICO_CLIENTES_BUCKET).upload(path, file, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type || "application/octet-stream",
+      contentType,
     });
     if (error) throw error;
-    const { data: pub } = client.storage.from("onboarding-attachments").getPublicUrl(path);
+    const { data: pub } = client.storage.from(DIAGNOSTICO_CLIENTES_BUCKET).getPublicUrl(path);
     uploaded.push({ path, name: file.name, size: file.size, url: pub.publicUrl });
   }
   return uploaded;
@@ -593,6 +600,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>(() => initialDraft?.selectedPrompts ?? []);
   const [extraDetail, setExtraDetail] = useState(() => initialDraft?.extraDetail ?? "");
   const [contextoFiles, setContextoFiles] = useState<File[]>([]);
+  const [contextoArchivosError, setContextoArchivosError] = useState<string | null>(null);
   const [contextoArchivosMeta, setContextoArchivosMeta] = useState<ContextoArchivoMeta[]>(() => initialDraft?.contextoArchivosMeta ?? []);
   const [otroText, setOtroText] = useState(() => initialDraft?.otroText ?? "");
   const [phase, setPhase] = useState<"form" | "processing" | "results">(() => initialDraft?.phase ?? "form");
@@ -918,6 +926,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     setSelectedPrompts([]);
     setExtraDetail("");
     setContextoFiles([]);
+    setContextoArchivosError(null);
     setContextoArchivosMeta([]);
     setOtroText("");
     setPhase("form");
@@ -946,13 +955,37 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         clearLocalStorageOnSuccess: false,
       });
 
+      // Carpeta Storage = primer segmento del path = este id (`onboarding_submissions.id`).
+      const submissionIdParaArchivos = onboardingSubmissionIdRef.current ?? sid;
+
       let archivos: ContextoArchivoMeta[] = [];
-      if (contextoFiles.length > 0 && supabase && sid) {
+      if (contextoFiles.length > 0) {
+        if (!supabase) {
+          setContextoArchivosError(
+            "Faltan las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY; no se pueden guardar los archivos.",
+          );
+          return;
+        }
+        if (!submissionIdParaArchivos) {
+          setContextoArchivosError(
+            "No se pudo obtener el id del análisis. Espera un momento y vuelve a intentarlo.",
+          );
+          return;
+        }
         try {
-          archivos = await uploadContextoArchivos(supabase, sid, contextoFiles);
+          archivos = await uploadContextoArchivos(supabase, submissionIdParaArchivos, contextoFiles);
           setContextoArchivosMeta(archivos);
         } catch (e) {
           console.error("Contexto file upload failed:", e);
+          let detail = "Error desconocido.";
+          if (e instanceof Error) detail = e.message;
+          else if (typeof e === "object" && e !== null && "message" in e) detail = String((e as { message: string }).message);
+          if (/bucket not found/i.test(detail)) {
+            detail +=
+              " Crea el bucket «diagnostico-clientes» en Supabase (o ejecuta las migraciones: supabase db push).";
+          }
+          setContextoArchivosError(`No se pudieron guardar los archivos en tu carpeta del análisis: ${detail}`);
+          return;
         }
         await persistOnboarding({
           current_step: nextStepNumber,
@@ -961,7 +994,9 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           clearLocalStorageOnSuccess: false,
         });
       }
+
       setContextoFiles([]);
+      setContextoArchivosError(null);
 
       if (currentStep < total - 1) {
         setDirection(1);
@@ -1385,10 +1420,37 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           <input
                             type="file"
                             multiple
-                            accept="image/*,.pdf,.doc,.docx,.zip,.ppt,.pptx,.txt"
-                            onChange={(e) => setContextoFiles(Array.from(e.target.files || []))}
+                            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.bmp,.tif,.tiff,.svg,.heic,.heif,.doc,.docx,.dot,.dotx,.xls,.xlsx,.xlsm,.csv,.ppt,.pptx,.pps,.ppsx,.txt,.rtf,.md,.odt,.ods,.odp,.zip,image/*"
+                            onChange={(e) => {
+                              const picked = Array.from(e.target.files || []);
+                              const { ok, rejected } = partitionDiagnosticoArchivos(picked, {
+                                existingCount: contextoFiles.length,
+                              });
+                              if (rejected.length > 0) {
+                                const msg = rejected.map((r) => `${r.file.name}: ${r.reason}`).join(" ");
+                                setContextoArchivosError(msg.length > 420 ? `${msg.slice(0, 420)}…` : msg);
+                              } else {
+                                setContextoArchivosError(null);
+                              }
+                              if (ok.length > 0) {
+                                setContextoFiles((prev) => {
+                                  const merged = [...prev, ...ok];
+                                  const seen = new Set<string>();
+                                  return merged.filter((f) => {
+                                    const k = `${f.name}\0${f.size}\0${f.lastModified}`;
+                                    if (seen.has(k)) return false;
+                                    seen.add(k);
+                                    return true;
+                                  });
+                                });
+                              }
+                              e.target.value = "";
+                            }}
                             className="w-full text-[13px] text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-[12px] file:bg-blue-50 file:text-blue-700 file:font-medium cursor-pointer"
                           />
+                          {contextoArchivosError && (
+                            <p className="text-[11px] text-amber-800 mt-1.5 leading-snug">{contextoArchivosError}</p>
+                          )}
                           {contextoFiles.length > 0 && (
                             <ul className="mt-2 space-y-1 text-[11px] text-gray-500">
                               {contextoFiles.map((f, i) => (
