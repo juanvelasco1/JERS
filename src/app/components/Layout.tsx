@@ -48,6 +48,7 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
 
   const navItems = [
     { label: "Diagnóstico", hasDropdown: false, href: "/diagnostico" },
+    { label: "Conócenos", hasDropdown: false, href: "/conocenos" },
     { label: "Portafolio", hasDropdown: false, href: "/portafolio" },
     { label: "Pricing", hasDropdown: false, href: "/pricing" },
   ];
@@ -125,6 +126,7 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
               <button onClick={() => { setMobileMenuOpen(false); navigate("/?diagnostico=true"); }} className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors cursor-pointer text-left w-full">Diagnóstico</button>
               <Link to="/portafolio" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Portafolio</Link>
               <Link to="/pricing" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
+              <Link to="/conocenos" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Conócenos</Link>
               <Link to="/terminos" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Términos</Link>
             </div>
           </motion.div>
@@ -166,7 +168,7 @@ function Footer() {
             <ul className="space-y-2">
               {[
                 { label: "Inicio", href: "/" },
-                { label: "Sobre Nosotros", href: "#" },
+                { label: "Sobre Nosotros", href: "/conocenos" },
                 { label: "Portafolio", href: "/portafolio" },
                 { label: "Contacto", href: "/contacto" },
                 { label: "FAQS", href: "/portafolio#faq" },

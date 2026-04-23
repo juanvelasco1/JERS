@@ -3,7 +3,6 @@ import { lazy, Suspense, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { ProcessAnimation } from "./ProcessAnimation";
-import { AboutCard } from "./AboutCard";
 
 const Onboarding = lazy(() =>
   import("./Onboarding").then((m) => ({ default: m.Onboarding })),
@@ -27,7 +26,6 @@ function Doodle({ children, className }: { children: React.ReactNode; className?
  
 export function HomePage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showContact, setShowContact] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -42,7 +40,7 @@ export function HomePage() {
       <div className="min-h-[calc(100dvh-4rem)] pb-12 sm:pb-20 relative overflow-x-hidden flex flex-col w-full max-w-[100vw]">
         {/* Doodles */}
         <AnimatePresence>
-          {!showOnboarding && !showContact && (
+          {!showOnboarding && (
             <>
               <Doodle className="top-20 right-[8%] sm:right-[14%] hidden sm:block">
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -63,7 +61,7 @@ export function HomePage() {
 
         {/* Hero */}
         <AnimatePresence>
-          {!showOnboarding && !showContact && (
+          {!showOnboarding && (
             <motion.section
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -106,8 +104,7 @@ export function HomePage() {
                   Comienza tu diagnóstico
                 </button>
                 <Link
-                  to="#"
-                  onClick={(e) => { e.preventDefault(); setShowContact(true); }}
+                  to="/conocenos"
                   className="inline-flex justify-center px-5 py-2.5 text-[13px] text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-center"
                   style={{ fontWeight: 600 }}
                 >
@@ -132,13 +129,11 @@ export function HomePage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
           className={`max-w-5xl w-full min-w-0 mx-auto px-3 sm:px-4 relative flex justify-center flex-1 min-h-0 ${
-            showOnboarding || showContact
-              ? "items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6"
-              : "items-center mt-6 sm:mt-8"
+            showOnboarding ? "items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6" : "items-center mt-6 sm:mt-8"
           }`}
         >
           <AnimatePresence>
-            {!showOnboarding && !showContact && (
+            {!showOnboarding && (
               <>
                 <Doodle className="left-2 top-1/3 hidden lg:block">
                   <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -162,7 +157,7 @@ export function HomePage() {
 
           <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full min-w-0 max-w-5xl">
             <AnimatePresence mode="wait">
-              {!showOnboarding && !showContact ? (
+              {!showOnboarding ? (
                 <motion.div
                   key="process"
                   exit={{ opacity: 0, scale: 0.96 }}
@@ -170,7 +165,7 @@ export function HomePage() {
                 >
                   <ProcessAnimation />
                 </motion.div>
-              ) : showOnboarding ? (
+              ) : (
                 <motion.div
                   key="onboarding"
                   initial={{ opacity: 0 }}
@@ -190,18 +185,6 @@ export function HomePage() {
                   >
                     <Onboarding onClose={() => setShowOnboarding(false)} />
                   </Suspense>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="about"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="bg-white border border-gray-100 w-full min-h-0 max-h-[calc(100dvh_-_8.5rem)] lg:max-h-[calc(100dvh_-_7.5rem)] rounded-xl sm:rounded-2xl flex flex-col"
-                  style={{ height: "clamp(360px, calc(100dvh - 8.5rem), 760px)" }}
-                >
-                  <AboutCard onClose={() => setShowContact(false)} />
                 </motion.div>
               )}
             </AnimatePresence>
