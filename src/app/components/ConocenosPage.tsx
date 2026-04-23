@@ -18,7 +18,7 @@ const heroStats = [
 
 const founders = [
   {
-    initials: "SM",
+    initials: "SR",
     name: "Sergio Restrepo Prado",
     role: "Co-founder & Chief Designer",
     bio: "Diseñador enfocado en producto digital y sistemas visuales. Lidera la dirección creativa y la coherencia de marca en cada entrega.",
