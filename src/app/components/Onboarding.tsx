@@ -30,6 +30,7 @@ import {
   buildDiagnosisUserPrompt,
   buildFallbackSolutionFlow,
   fetchGeminiDiagnosis,
+  fetchGroqDiagnosis,
 } from "@/app/lib/diagnosisAi";
 
 const FLOW_ICONS = [User, Globe2, ChevronsRight, CheckCircle2] as const;
@@ -805,6 +806,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     filesMeta: ContextoArchivoMeta[],
   ): Promise<{ diagnosis: AIDiagnosis; rawResponseText?: string; errorHint?: string }> => {
     const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
+    const groqKey = (import.meta.env.VITE_GROQ_API_KEY as string | undefined)?.trim();
 
     const archivosBlock =
       filesMeta.length > 0
@@ -838,6 +840,17 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push(`Gemini: ${msg}`);
         console.error("Gemini diagnosis failed:", err);
+      }
+    }
+
+    if (groqKey) {
+      try {
+        const { diagnosis, rawResponseText } = await fetchGroqDiagnosis(prompt, groqKey);
+        return { diagnosis, rawResponseText };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`Groq: ${msg}`);
+        console.error("Groq diagnosis failed:", err);
       }
     }
 
@@ -891,6 +904,9 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         ...(contextoArchivosMeta.length > 0 ? { contexto_archivos: contextoArchivosMeta } : {}),
         ...(diagnosis.source === "gemini" && rawResponseText
           ? { gemini_raw_response: rawResponseText }
+          : {}),
+        ...(diagnosis.source === "groq" && rawResponseText
+          ? { groq_raw_response: rawResponseText }
           : {}),
       }),
       clearLocalStorageOnSuccess: true,
@@ -1566,6 +1582,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           <div className="mt-1 space-y-0.5">
                             <p className="text-[10px] text-blue-500/90" style={{ fontWeight: 500 }}>
                               {aiDiagnosis.source === "gemini" && "Informe basado en Gemini (guardado en tu registro)"}
+                              {aiDiagnosis.source === "groq" && "Informe basado en IA (Groq) (guardado en tu registro)"}
                               {aiDiagnosis.source === "openai" && "Informe basado en IA (guardado en tu registro)"}
                               {aiDiagnosis.source === "fallback" && "Informe base (IA no disponible o error de red)"}
                             </p>

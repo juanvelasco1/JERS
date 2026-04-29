@@ -5,7 +5,7 @@ export type SolutionFlowData = {
   narrative: string;
 };
 
-export type DiagnosisSource = "gemini" | "openai" | "fallback";
+export type DiagnosisSource = "gemini" | "groq" | "openai" | "fallback";
 
 export type AIDiagnosis = {
   summary: string;
@@ -260,6 +260,50 @@ export async function fetchOpenAIDiagnosis(prompt: string, apiKey: string): Prom
   if (!parsed) throw new Error("OpenAI JSON format invalid.");
   return {
     diagnosis: { ...parsed, source: "openai" },
+    rawResponseText: text,
+  };
+}
+
+export async function fetchGroqDiagnosis(prompt: string, apiKey: string): Promise<DiagnosisModelResult> {
+  // Groq provides an OpenAI-compatible endpoint.
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: "Eres un consultor digital. Devuelve solo JSON válido." },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1200,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let msg = errorText.trim();
+    try {
+      const parsed = JSON.parse(errorText) as { error?: { message?: string } };
+      if (parsed?.error?.message) msg = String(parsed.error.message).trim();
+    } catch {
+      // ignore json parse
+    }
+    if (msg.length > 500) msg = `${msg.slice(0, 497)}…`;
+    throw new Error(`Groq HTTP ${response.status}: ${msg || "Unknown error"}`);
+  }
+
+  const json = await response.json();
+  const text = json?.choices?.[0]?.message?.content as string | undefined;
+  if (!text) throw new Error("Groq response did not include text.");
+
+  const parsed = parseDiagnosisJson(text);
+  if (!parsed) throw new Error("Groq JSON format invalid.");
+  return {
+    diagnosis: { ...parsed, source: "groq" },
     rawResponseText: text,
   };
 }
