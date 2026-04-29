@@ -30,7 +30,6 @@ import {
   buildDiagnosisUserPrompt,
   buildFallbackSolutionFlow,
   fetchGeminiDiagnosis,
-  fetchOpenAIDiagnosis,
 } from "@/app/lib/diagnosisAi";
 
 const FLOW_ICONS = [User, Globe2, ChevronsRight, CheckCircle2] as const;
@@ -607,6 +606,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [direction, setDirection] = useState(1);
   const [processingStep, setProcessingStep] = useState(() => initialDraft?.processingStep ?? 0);
   const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(() => initialDraft?.aiDiagnosis ?? null);
+  const [aiErrorHint, setAiErrorHint] = useState<string | null>(null);
 
   const STORAGE_KEY = "onboarding_submission_id_v1";
   /** Refleja el id de fila en Supabase de forma síncrona (evita carreras tras insert antes del re-render). */
@@ -803,11 +803,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     answers: Record<string, string>,
     prompts: string[],
     filesMeta: ContextoArchivoMeta[],
-  ): Promise<{ diagnosis: AIDiagnosis; rawResponseText?: string }> => {
+  ): Promise<{ diagnosis: AIDiagnosis; rawResponseText?: string; errorHint?: string }> => {
     const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
-    const openaiKey =
-      ((import.meta.env.VITE_OPENAI_API_KEY as string | undefined)
-        || (import.meta.env.OPENAI_API_KEY as string | undefined))?.trim();
 
     const archivosBlock =
       filesMeta.length > 0
@@ -831,20 +828,27 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       archivosBlock,
     ]);
 
-    try {
-      if (geminiKey) {
+    const errors: string[] = [];
+
+    if (geminiKey) {
+      try {
         const { diagnosis, rawResponseText } = await fetchGeminiDiagnosis(prompt, geminiKey);
         return { diagnosis, rawResponseText };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        errors.push(`Gemini: ${msg}`);
+        console.error("Gemini diagnosis failed:", err);
       }
-      if (openaiKey) {
-        const { diagnosis, rawResponseText } = await fetchOpenAIDiagnosis(prompt, openaiKey);
-        return { diagnosis, rawResponseText };
-      }
-    } catch (err) {
-      console.error("AI diagnosis failed, using fallback:", err);
     }
 
-    return { diagnosis: buildFallbackDiagnosis(answers, prompts) };
+    const errorHint = errors.length > 0 ? errors[0] : undefined;
+    if (errors.length > 0) {
+      const concise = errors
+        .map((e) => (e.length > 240 ? `${e.slice(0, 237)}…` : e))
+        .join(" | ");
+      console.warn("AI diagnosis failed, using fallback:", concise);
+    }
+    return { diagnosis: buildFallbackDiagnosis(answers, prompts), errorHint };
   };
 
   const runProcessingAnimation = () =>
@@ -888,9 +892,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         ...(diagnosis.source === "gemini" && rawResponseText
           ? { gemini_raw_response: rawResponseText }
           : {}),
-        ...(diagnosis.source === "openai" && rawResponseText
-          ? { openai_raw_response: rawResponseText }
-          : {}),
       }),
       clearLocalStorageOnSuccess: true,
     });
@@ -899,16 +900,18 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const startProcessing = () => {
     setPhase("processing");
     setProcessingStep(0);
+    setAiErrorHint(null);
 
     const answersSnapshot = { ...data };
     const promptsSnapshot = [...selectedPrompts];
 
     void (async () => {
-      const [{ diagnosis, rawResponseText }] = await Promise.all([
+      const [{ diagnosis, rawResponseText, errorHint }] = await Promise.all([
         generateDiagnosisWithAI(answersSnapshot, promptsSnapshot, contextoArchivosMeta),
         runProcessingAnimation(),
       ]);
 
+      setAiErrorHint(errorHint ?? null);
       await persistDiagnosisResult(diagnosis, answersSnapshot, promptsSnapshot, rawResponseText);
       setAiDiagnosis(diagnosis);
       setPhase("results");
@@ -1560,11 +1563,18 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                           {data.empresa || "Tu empresa"} — {getIndustriaLabel(data.industria)}
                         </p>
                         {aiDiagnosis?.source && (
-                          <p className="text-[10px] text-blue-500/90 mt-1" style={{ fontWeight: 500 }}>
-                            {aiDiagnosis.source === "gemini" && "Informe basado en Gemini (guardado en tu registro)"}
-                            {aiDiagnosis.source === "openai" && "Informe basado en OpenAI (guardado en tu registro)"}
-                            {aiDiagnosis.source === "fallback" && "Informe base (IA no disponible o error de red)"}
-                          </p>
+                          <div className="mt-1 space-y-0.5">
+                            <p className="text-[10px] text-blue-500/90" style={{ fontWeight: 500 }}>
+                              {aiDiagnosis.source === "gemini" && "Informe basado en Gemini (guardado en tu registro)"}
+                              {aiDiagnosis.source === "openai" && "Informe basado en IA (guardado en tu registro)"}
+                              {aiDiagnosis.source === "fallback" && "Informe base (IA no disponible o error de red)"}
+                            </p>
+                            {aiDiagnosis.source === "fallback" && aiErrorHint && (
+                              <p className="text-[10px] text-gray-400 truncate" title={aiErrorHint}>
+                                {aiErrorHint}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

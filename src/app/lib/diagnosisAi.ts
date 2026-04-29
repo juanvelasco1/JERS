@@ -191,7 +191,17 @@ export async function fetchGeminiDiagnosis(prompt: string, apiKey: string): Prom
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Gemini HTTP ${response.status}: ${errText}`);
+    let msg = errText.trim();
+    try {
+      const parsed = JSON.parse(errText) as { error?: { message?: string } };
+      if (parsed?.error?.message) msg = String(parsed.error.message).trim();
+    } catch {
+      // best-effort: try to extract "message" without strict JSON parse
+      const m = errText.match(/"message"\s*:\s*"([^"]+)"/);
+      if (m?.[1]) msg = m[1];
+    }
+    if (msg.length > 500) msg = `${msg.slice(0, 497)}…`;
+    throw new Error(`Gemini HTTP ${response.status}: ${msg || "Unknown error"}`);
   }
 
   const json = (await response.json()) as {
@@ -231,7 +241,15 @@ export async function fetchOpenAIDiagnosis(prompt: string, apiKey: string): Prom
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenAI HTTP ${response.status}: ${errorText}`);
+    let msg = errorText.trim();
+    try {
+      const parsed = JSON.parse(errorText) as { error?: { message?: string } };
+      if (parsed?.error?.message) msg = String(parsed.error.message).trim();
+    } catch {
+      // ignore json parse
+    }
+    if (msg.length > 500) msg = `${msg.slice(0, 497)}…`;
+    throw new Error(`OpenAI HTTP ${response.status}: ${msg || "Unknown error"}`);
   }
 
   const json = await response.json();
