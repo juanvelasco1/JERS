@@ -47,6 +47,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_OPENAI_API_KEY: ${{ vars.VITE_OPENAI_API_KEY || secrets.VITE_OPENAI_API_KEY }}
+          VITE_GROQ_API_KEY: ${{ vars.VITE_GROQ_API_KEY || secrets.VITE_GROQ_API_KEY }}
         run: |
           # Fail fast if required runtime env vars are missing.
           echo "Env check: VITE_SUPABASE_ANON_KEY set? $([ -n "$VITE_SUPABASE_ANON_KEY" ] && echo yes || echo no)"
