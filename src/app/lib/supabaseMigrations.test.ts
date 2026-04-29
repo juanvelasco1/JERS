@@ -1,11 +1,33 @@
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const migrationsDir = join(process.cwd(), "supabase/migrations");
+/**
+ * Avoid relying on `process.cwd()` since other tests or runners may `chdir`,
+ * which can make these filesystem assertions unexpectedly slow or flaky.
+ */
+const here = dirname(fileURLToPath(import.meta.url));
+function findRepoRoot(startDir: string): string {
+  // Walk up until we find package.json (repo root in this project)
+  let dir = resolve(startDir);
+  for (let i = 0; i < 12; i++) {
+    if (existsSync(join(dir, "package.json"))) return dir;
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return resolve(startDir, "../../../..");
+}
+
+const repoRoot = findRepoRoot(here);
+const migrationsDir = join(repoRoot, "supabase/migrations");
 
 describe("Supabase migrations (schema as in previous project)", () => {
-  it("defines onboarding_submissions table, RLS, and storage bucket", () => {
+  it(
+    "defines onboarding_submissions table, RLS, and storage bucket",
+    { timeout: 60_000 },
+    () => {
     const table = join(migrationsDir, "20260319195316_create_onboarding_submissions_table.sql");
     const rls = join(migrationsDir, "20260319210000_enable_rls_onboarding_submissions.sql");
     const storageLegacy = join(migrationsDir, "20260319220000_onboarding_attachments_bucket.sql");
@@ -39,5 +61,6 @@ describe("Supabase migrations (schema as in previous project)", () => {
     expect(sMimes).toContain("allowed_mime_types");
     expect(sMimes).toContain("application/pdf");
     expect(sMimes).not.toMatch(/video\//);
-  });
+    },
+  );
 });

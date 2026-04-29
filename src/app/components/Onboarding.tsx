@@ -29,7 +29,6 @@ import {
   type SolutionFlowData,
   buildDiagnosisUserPrompt,
   buildFallbackSolutionFlow,
-  fetchGeminiDiagnosis,
   fetchGroqDiagnosis,
 } from "@/app/lib/diagnosisAi";
 
@@ -805,7 +804,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     prompts: string[],
     filesMeta: ContextoArchivoMeta[],
   ): Promise<{ diagnosis: AIDiagnosis; rawResponseText?: string; errorHint?: string }> => {
-    const geminiKey = (import.meta.env.VITE_GEMINI_API_KEY as string | undefined)?.trim();
     const groqKey = (import.meta.env.VITE_GROQ_API_KEY as string | undefined)?.trim();
 
     const archivosBlock =
@@ -831,17 +829,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     ]);
 
     const errors: string[] = [];
-
-    if (geminiKey) {
-      try {
-        const { diagnosis, rawResponseText } = await fetchGeminiDiagnosis(prompt, geminiKey);
-        return { diagnosis, rawResponseText };
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`Gemini: ${msg}`);
-        console.error("Gemini diagnosis failed:", err);
-      }
-    }
 
     if (groqKey) {
       try {
@@ -902,9 +889,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
         problema: problemaCombined,
         ai_diagnosis: diagnosis,
         ...(contextoArchivosMeta.length > 0 ? { contexto_archivos: contextoArchivosMeta } : {}),
-        ...(diagnosis.source === "gemini" && rawResponseText
-          ? { gemini_raw_response: rawResponseText }
-          : {}),
         ...(diagnosis.source === "groq" && rawResponseText
           ? { groq_raw_response: rawResponseText }
           : {}),
@@ -1581,7 +1565,6 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                         {aiDiagnosis?.source && (
                           <div className="mt-1 space-y-0.5">
                             <p className="text-[10px] text-blue-500/90" style={{ fontWeight: 500 }}>
-                              {aiDiagnosis.source === "gemini" && "Informe basado en Gemini (guardado en tu registro)"}
                               {aiDiagnosis.source === "groq" && "Informe basado en IA (Groq) (guardado en tu registro)"}
                               {aiDiagnosis.source === "openai" && "Informe basado en IA (guardado en tu registro)"}
                               {aiDiagnosis.source === "fallback" && "Informe base (IA no disponible o error de red)"}
