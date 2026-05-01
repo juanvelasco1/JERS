@@ -13,12 +13,12 @@ const heroStats = [
   { label: "Rol", value: "Consultora" },
   { label: "Sede", value: "Santiago de Cali" },
   { label: "Año", value: "2023" },
-  { label: "Proyectos", value: "10+" },
+  { label: "Proyectos", value: "En crecimiento" },
 ];
 
 const founders = [
   {
-    initials: "SR",
+    initials: "SRP",
     name: "Sergio Restrepo Prado",
     role: "Co-founder & Chief Designer",
     bio: "Diseñador enfocado en producto digital y sistemas visuales. Lidera la dirección creativa y la coherencia de marca en cada entrega.",
@@ -75,7 +75,7 @@ const servicios = [
 
 const trayectoria = [
   { year: "2023", title: "Fundación de JERS", desc: "Arrancamos en Santiago de Cali con foco en diseño y producto digital." },
-  { year: "2023—24", title: "Primeros 10 proyectos", desc: "Consolidamos procesos, plantillas y un portafolio con clientes reales." },
+  { year: "2023—24", title: "Consolidación y aprendizaje", desc: "Desarrollo de metodología propia y primeros clientes estratégicos." },
   { year: "Hoy", title: "Expansión digital", desc: "Diagnóstico con IA, automatización y soluciones más integrales." },
 ];
 
@@ -90,11 +90,11 @@ function ConocenosFooter() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           <div>
-            <Link to="/" className="flex flex-wrap items-center gap-1 mb-4">
+            <Link to="/" className="flex flex-wrap items-center gap-1 mb-4" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
               <span className="text-[15px]" style={{ fontWeight: 700 }}>
                 JERS
               </span>
-              <span className="text-[15px]" style={{ fontWeight: 700, color: BRAND }}>
+              <span className="text-[15px]" style={{ fontWeight: 400, color: BRAND }}>
                 Consultora Digital
               </span>
             </Link>
@@ -166,7 +166,9 @@ function ConocenosFooter() {
           </div>
         </div>
         <div className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[11px] text-gray-400">© {new Date().getFullYear()} JERS Consultora Digital. Todos los derechos reservados.</p>
+          <p className="text-[11px] text-gray-400" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+            © {new Date().getFullYear()} <span className="font-bold">JERS</span>{" "}<span className="font-normal">Consultora Digital</span>. Todos los derechos reservados.
+          </p>
           <div className="flex items-center gap-6">
             <a
               href="https://www.instagram.com/consultora_jers"
@@ -195,28 +197,28 @@ export function ConocenosPage() {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="min-h-dvh min-h-screen bg-white text-gray-900 antialiased">
+    <div className="min-h-dvh min-h-screen bg-white text-gray-900 antialiased font-sans">
       {/* Hero + barra superior (pantalla completa ancho viewport) */}
       <header className="relative text-white" style={{ background: `linear-gradient(165deg, ${BRAND_DEEP} 0%, ${BRAND} 55%, #3B82F6 100%)` }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 pb-16 sm:pb-24">
-          <div className="flex items-center justify-between gap-4 mb-10 sm:mb-14">
-            <Link to="/" className="flex flex-wrap items-center gap-1.5 shrink-0">
-              <span className="text-[15px] sm:text-[16px]" style={{ fontWeight: 700 }}>
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 pt-12 sm:pt-16 pb-4">
+          <div className="flex items-center justify-between gap-4 mb-10 sm:mb-14 h-12">
+            <Link to="/" className="flex items-center gap-1 min-w-0 shrink-0" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+              <span className="text-sm sm:text-[15px]" style={{ fontWeight: 700 }}>
                 JERS
               </span>
-              <span className="text-[13px] sm:text-[14px] text-white/90" style={{ fontWeight: 600 }}>
+              <span className="text-sm sm:text-[15px] text-white/90" style={{ fontWeight: 400 }}>
                 Consultora Digital
               </span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-8 text-[13px] text-white/90" style={{ fontWeight: 500 }}>
-              <a href="#proposito" className="hover:text-white transition-colors">
+            <nav className="hidden md:flex items-center gap-1 text-[13px] text-white/90" style={{ fontWeight: 500 }}>
+              <a href="#proposito" className="px-3 py-2 rounded-md hover:bg-white/10 hover:text-white transition-colors">
                 Propósito
               </a>
-              <a href="#equipo" className="hover:text-white transition-colors">
+              <a href="#equipo" className="px-3 py-2 rounded-md hover:bg-white/10 hover:text-white transition-colors">
                 Nuestro equipo
               </a>
-              <Link to="/pricing" className="hover:text-white transition-colors">
+              <Link to="/pricing" className="px-3 py-2 rounded-md hover:bg-white/10 hover:text-white transition-colors">
                 Precios
               </Link>
             </nav>
@@ -232,14 +234,14 @@ export function ConocenosPage() {
           </div>
 
           {navOpen && (
-            <div className="md:hidden border-t border-white/15 py-4 space-y-3 text-[14px] text-white/95 mb-8">
-              <a href="#proposito" className="block py-1" onClick={() => setNavOpen(false)}>
+            <div className="md:hidden border-t border-white/15 px-5 py-3 space-y-1 text-[14px] text-white/95 mb-8">
+              <a href="#proposito" className="block py-2 px-3 rounded-lg hover:bg-white/10 transition-colors" onClick={() => setNavOpen(false)}>
                 Propósito
               </a>
-              <a href="#equipo" className="block py-1" onClick={() => setNavOpen(false)}>
+              <a href="#equipo" className="block py-2 px-3 rounded-lg hover:bg-white/10 transition-colors" onClick={() => setNavOpen(false)}>
                 Nuestro equipo
               </a>
-              <Link to="/pricing" className="block py-1" onClick={() => setNavOpen(false)}>
+              <Link to="/pricing" className="block py-2 px-3 rounded-lg hover:bg-white/10 transition-colors" onClick={() => setNavOpen(false)}>
                 Precios
               </Link>
             </div>
@@ -249,8 +251,9 @@ export function ConocenosPage() {
             <span className="inline-block rounded-full border border-white/35 bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/95 mb-4">
               Sobre nosotros
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl max-w-3xl leading-tight mb-3" style={{ fontWeight: 800 }}>
-              JERS Consultora Digital
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl max-w-3xl leading-tight mb-3" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
+              <span className="font-bold">JERS</span>{" "}
+              <span className="font-normal">Consultora Digital</span>
             </h1>
             <p className="text-lg sm:text-xl text-white/90 mb-6 max-w-2xl" style={{ fontWeight: 600 }}>
               Creciendo de forma exponencial
@@ -281,7 +284,7 @@ export function ConocenosPage() {
 
       {/* Origen */}
       <section id="origen" className="scroll-mt-20 py-14 sm:py-20" style={{ backgroundColor: CREAM }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <div>
             <p className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ fontWeight: 600, color: BRAND }}>
               Nuestra historia
@@ -315,7 +318,7 @@ export function ConocenosPage() {
 
       {/* Equipo */}
       <section id="equipo" className="scroll-mt-20 py-14 sm:py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
             <p className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ fontWeight: 600, color: BRAND }}>
               Fundadores
@@ -358,7 +361,7 @@ export function ConocenosPage() {
 
       {/* Valores */}
       <section className="py-14 sm:py-20" style={{ backgroundColor: CREAM }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
             <p className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ fontWeight: 600, color: BRAND }}>
               Cultura
@@ -393,7 +396,7 @@ export function ConocenosPage() {
 
       {/* Servicios */}
       <section className="py-14 sm:py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
             <p className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ fontWeight: 600, color: BRAND }}>
               Capacidades
@@ -424,7 +427,7 @@ export function ConocenosPage() {
 
       {/* Trayectoria */}
       <section className="py-14 sm:py-20" style={{ backgroundColor: CREAM }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <p className="text-[11px] uppercase tracking-[0.14em] mb-2" style={{ fontWeight: 600, color: BRAND }}>
               Trayectoria
@@ -459,7 +462,7 @@ export function ConocenosPage() {
 
       {/* Comunidad */}
       <section className="text-white py-14 sm:py-20" style={{ background: `linear-gradient(165deg, ${BRAND_DEEP} 0%, ${BRAND} 100%)` }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <div>
             <h2 className="text-2xl sm:text-3xl mb-4" style={{ fontWeight: 800 }}>
               Conectados con la comunidad

@@ -57,9 +57,9 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 bg-[#fcfaf5cc]">
       <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 min-w-0">
         <div className="flex items-center justify-between h-12 gap-2 min-w-0">
-          <Link to="/" className="flex items-center gap-1 min-w-0 shrink">
+          <Link to="/" className="flex items-center gap-1 min-w-0 shrink" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
             <span className="text-sm sm:text-[15px] shrink-0" style={{ fontWeight: 700 }}>JERS</span>
-            <span className="text-sm sm:text-[15px] text-blue-600 truncate min-w-0">Consultora Digital</span>
+            <span className="text-sm sm:text-[15px] text-blue-600 truncate min-w-0" style={{ fontWeight: 400 }}>Consultora Digital</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -143,9 +143,9 @@ function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div>
-            <Link to="/" className="flex items-center gap-1 mb-4">
+            <Link to="/" className="flex items-center gap-1 mb-4" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
               <span className="text-[15px]" style={{ fontWeight: 700 }}>JERS</span>
-              <span className="text-[15px] text-blue-600">Consultora Digital</span>
+              <span className="text-[15px] text-blue-600" style={{ fontWeight: 400 }}>Consultora Digital</span>
             </Link>
             <p className="text-[12px] text-gray-500 leading-relaxed">
               Especializados en diseño UI/UX y desarrollo web. Transformamos negocios familiares y startups con soluciones digitales personalizadas que generan resultados reales.
@@ -194,7 +194,7 @@ function Footer() {
         </div>
 
         <div className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[11px] text-gray-400">© 2025 JERS Consultora Digital. Todos los derechos reservados.</p>
+          <p className="text-[11px] text-gray-400" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>© 2025 <span style={{ fontWeight: 700 }}>JERS</span> <span style={{ fontWeight: 400 }}>Consultora Digital</span>. Todos los derechos reservados.</p>
           <div className="flex items-center gap-6">
             <Link to="/terminos" className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors">Términos y Condiciones</Link>
             <a href="#" className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors">Políticas de privacidad</a>
