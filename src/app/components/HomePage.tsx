@@ -187,7 +187,7 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className={`relative mx-auto flex w-full min-w-0 max-w-full justify-center px-3 sm:px-4 ${
+          className={`relative mx-auto flex w-full min-w-0 max-w-full justify-center pl-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))] sm:pl-4 sm:pr-4 ${
             showOnboarding
               ? onboardingShell === "results"
                 ? "mt-2 flex-col items-center gap-4 pb-4 sm:mt-3 sm:pb-6 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:pb-8"

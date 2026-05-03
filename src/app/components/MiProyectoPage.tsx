@@ -14,6 +14,7 @@ import { JERS_CAL_30MIN_BOOKING_URL } from "@/app/lib/jersBooking";
 import { SolutionFlowProposal } from "@/app/components/SolutionFlowProposal";
 import { ONBOARDING_USER_LINK_REPAIR_SQL } from "@/app/lib/onboardingUserLinkRepairSql";
 import { tryClaimPendingSubmissionFromStorage } from "@/app/lib/diagnosticClaimStorage";
+import { DIAGNOSTIC_CLAIM_READY_EVENT } from "@/app/lib/diagnosticClaimEvents";
 import { readOnboardingDraft, type OnboardingDraftV1 } from "@/app/lib/onboardingDraft";
 import { getSimulatedPhases, type SimulatedPhase } from "@/app/lib/simulatedMiProyectoProgress";
 
@@ -231,6 +232,21 @@ export function MiProyectoPage() {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const onClaimReady = () => {
+      void load();
+    };
+    const onVis = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener(DIAGNOSTIC_CLAIM_READY_EVENT, onClaimReady);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener(DIAGNOSTIC_CLAIM_READY_EVENT, onClaimReady);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [load]);
 
   const diagnosis = useMemo(() => {

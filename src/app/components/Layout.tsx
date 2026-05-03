@@ -21,9 +21,9 @@ export function Layout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-dvh min-h-screen flex flex-col bg-[#FCFAF5] w-full min-w-0 max-w-full overflow-x-clip">
+    <div className="flex min-h-dvh min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-clip bg-[#FCFAF5] pb-[env(safe-area-inset-bottom,0px)]">
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      <main className="flex flex-1 flex-col pt-16 min-h-0 min-w-0 w-full overflow-x-clip">
+      <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-clip pt-[calc(3rem+env(safe-area-inset-top,0px))]">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -57,8 +57,8 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 bg-[#fcfaf5cc]">
-      <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 min-w-0">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200/50 bg-[#fcfaf5cc] bg-white/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl">
+      <div className="mx-auto w-full max-w-5xl min-w-0 px-3 sm:px-6">
         <div className="flex items-center justify-between h-12 gap-2 min-w-0">
           <Link to="/" className="flex items-center gap-1 min-w-0 shrink" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
             <span className="text-sm sm:text-[15px] shrink-0" style={{ fontWeight: 700 }}>JERS</span>
@@ -154,9 +154,9 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="md:hidden overflow-hidden border-t border-gray-200/50"
+            className="max-h-[min(72dvh,calc(100dvh-3.5rem))] overflow-hidden border-t border-gray-200/50 md:hidden"
           >
-            <div className="px-5 py-3 space-y-1">
+            <div className="max-h-[min(72dvh,calc(100dvh-3.5rem))] space-y-1 overflow-y-auto overscroll-contain px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
               <button onClick={() => { setMobileMenuOpen(false); navigate("/?diagnostico=true"); }} className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors cursor-pointer text-left w-full">Diagnóstico</button>
               <Link to="/portafolio" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Portafolio</Link>
               <Link to="/pricing" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>

@@ -21,6 +21,15 @@ begin
     raise exception 'not_authenticated';
   end if;
 
+  if exists (
+    select 1
+    from public.onboarding_submissions
+    where id = p_submission
+      and user_id = auth.uid()
+  ) then
+    return true;
+  end if;
+
   update public.onboarding_submissions
   set
     user_id = auth.uid()
@@ -56,6 +65,7 @@ drop policy if exists "onboarding_submissions_auth_insert_open" on public.onboar
 
 create policy "onboarding_submissions_auth_insert_open" on public.onboarding_submissions for insert to authenticated with check (
   user_id is null
+  or user_id = auth.uid()
 );
 
 drop policy if exists "onboarding_submissions_auth_update_unclaimed" on public.onboarding_submissions;

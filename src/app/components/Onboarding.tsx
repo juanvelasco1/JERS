@@ -641,6 +641,17 @@ export function Onboarding({
       const activeId = onboardingSubmissionIdRef.current;
 
       if (!activeId) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const authUser = session?.user;
+        const isAnonymousAuth = Boolean(
+          authUser && "is_anonymous" in authUser && (authUser as { is_anonymous?: boolean }).is_anonymous,
+        );
+        if (authUser?.id && !isAnonymousAuth) {
+          (saveData as Record<string, unknown>).user_id = authUser.id;
+        }
+
         const insert = await supabase
           .from("onboarding_submissions")
           .insert(saveData)
@@ -1130,7 +1141,7 @@ export function Onboarding({
           }
         >
           {/* Top bar */}
-          <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-4 sm:px-8 md:px-10 py-3 sm:py-4 min-w-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 border-b border-gray-100/80">
+          <div className="sticky top-0 z-20 flex min-w-0 items-center justify-between gap-2 border-b border-gray-100/80 bg-white/95 py-3 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:py-4 sm:pl-8 sm:pr-8 md:pl-10 md:pr-10">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
               <button
                 type="button"
@@ -1172,7 +1183,7 @@ export function Onboarding({
 
           {/* Form content — form/processing: scroll interno; resultados: flujo con scroll de página */}
           <div
-            className={`flex flex-1 flex-col px-4 sm:px-8 md:px-10 ${
+            className={`flex flex-1 flex-col px-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))] sm:px-8 md:px-10 ${
               phase === "results"
                 ? "min-h-0 pt-1 pb-6"
                 : "min-h-0 justify-start overflow-y-auto overscroll-contain pb-2 pt-2 sm:justify-center"
@@ -1182,7 +1193,7 @@ export function Onboarding({
               className={`mx-auto w-full min-w-0 ${
                 phase === "results"
                   ? "max-w-2xl py-2 pb-8"
-                  : `max-w-sm py-4 pb-4 sm:py-6`
+                  : "max-w-full py-4 pb-4 sm:max-w-sm sm:py-6"
               }`}
               onKeyDown={handleKeyDown}
             >
@@ -1694,7 +1705,7 @@ export function Onboarding({
 
           {/* Bottom nav */}
           {phase === "form" && (
-            <div className="sticky bottom-0 z-20 px-4 sm:px-8 md:px-10 py-3 sm:py-3.5 shrink-0 border-t border-gray-100/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+            <div className="sticky bottom-0 z-20 shrink-0 border-t border-gray-100/80 bg-white/95 py-3 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:py-3.5 sm:pl-8 sm:pr-8 md:pl-10 md:pr-10">
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   onClick={currentStep === 0 ? onClose : goBack}

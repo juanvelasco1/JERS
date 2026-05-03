@@ -34,6 +34,7 @@ describe("Supabase migrations (schema as in previous project)", () => {
     const storageClientes = join(migrationsDir, "20260422120000_diagnostico_clientes_storage.sql");
     const storageMimes = join(migrationsDir, "20260422150000_diagnostico_clientes_allowed_mimes.sql");
     const userLink = join(migrationsDir, "20260503120000_onboarding_submissions_user_link.sql");
+    const authInsertOwner = join(migrationsDir, "20260504120000_onboarding_auth_insert_owner_and_claim_noop.sql");
 
     expect(existsSync(table)).toBe(true);
     expect(existsSync(rls)).toBe(true);
@@ -41,6 +42,7 @@ describe("Supabase migrations (schema as in previous project)", () => {
     expect(existsSync(storageClientes)).toBe(true);
     expect(existsSync(storageMimes)).toBe(true);
     expect(existsSync(userLink)).toBe(true);
+    expect(existsSync(authInsertOwner)).toBe(true);
 
     const t = readFileSync(table, "utf8");
     expect(t).toContain("onboarding_submissions");
@@ -68,6 +70,10 @@ describe("Supabase migrations (schema as in previous project)", () => {
     expect(u).toContain("user_id");
     expect(u).toContain("claim_onboarding_submission");
     expect(u).toContain("onboarding_submissions_anon_update");
+
+    const a = readFileSync(authInsertOwner, "utf8");
+    expect(a).toContain("user_id = auth.uid()");
+    expect(a).toContain("claim_onboarding_submission");
     },
   );
 });
