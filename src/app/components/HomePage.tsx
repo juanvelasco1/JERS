@@ -91,7 +91,9 @@ export function HomePage() {
       <div
         className={`relative flex w-full min-w-0 max-w-full flex-col overflow-x-clip ${
           showOnboarding
-            ? "min-h-0 flex-1 pb-2 sm:pb-4"
+            ? onboardingShell === "results"
+              ? "w-full pb-16 sm:pb-20"
+              : "min-h-0 flex-1 pb-2 sm:pb-4"
             : "min-h-[calc(100dvh-4rem)] pb-12 sm:pb-20"
         }`}
       >
@@ -185,10 +187,12 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className={`relative mx-auto flex w-full min-w-0 max-w-full flex-1 justify-center px-3 sm:px-4 ${
+          className={`relative mx-auto flex w-full min-w-0 max-w-full justify-center px-3 sm:px-4 ${
             showOnboarding
-              ? "mt-2 min-h-0 flex-col items-stretch gap-4 pb-2 sm:mt-3 sm:pb-4 2xl:flex-row 2xl:items-start 2xl:pb-6"
-              : "max-w-5xl min-h-0 items-center mt-6 sm:mt-8"
+              ? onboardingShell === "results"
+                ? "mt-2 flex-col items-center gap-4 pb-4 sm:mt-3 sm:pb-6 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:pb-8"
+                : "min-h-0 flex-1 flex-col items-stretch gap-4 pb-2 sm:mt-3 sm:pb-4 2xl:flex-row 2xl:items-start 2xl:pb-6"
+              : "max-w-5xl min-h-0 flex-1 items-center mt-6 sm:mt-8"
           }`}
         >
           <AnimatePresence>
@@ -215,7 +219,13 @@ export function HomePage() {
           </AnimatePresence>
 
           <div
-            className={`w-full min-w-0 ${showOnboarding ? "max-w-none" : "max-w-5xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg"}`}
+            className={`min-w-0 ${
+              showOnboarding
+                ? onboardingShell === "results"
+                  ? "flex w-full max-w-full justify-center"
+                  : "w-full max-w-none"
+                : "w-full max-w-5xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg"
+            }`}
           >
             <AnimatePresence mode="wait">
               {!showOnboarding ? (
@@ -235,12 +245,24 @@ export function HomePage() {
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className={
                     onboardingShell === "results"
-                      ? "h-auto w-full min-h-0 max-h-[min(720px,calc(100dvh-4rem))]"
+                      ? "flex w-full min-w-0 flex-col items-center"
                       : "h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))] w-full min-h-0"
                   }
                 >
-                  <div className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-col items-stretch justify-center gap-4 2xl:flex-row 2xl:items-start 2xl:gap-5">
-                    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl">
+                  <div
+                    className={
+                      onboardingShell === "results"
+                        ? "flex w-full max-w-full min-w-0 flex-col items-center gap-4 2xl:w-fit 2xl:max-w-[min(100vw-2rem,calc(64rem+20rem+1.5rem))] 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:gap-5"
+                        : "flex h-full min-h-0 w-full max-w-full min-w-0 flex-col items-stretch justify-center gap-4 2xl:flex-row 2xl:items-start 2xl:gap-5"
+                    }
+                  >
+                    <div
+                      className={
+                        onboardingShell === "results"
+                          ? "flex w-full min-w-0 max-w-5xl shrink-0 flex-col self-center rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl 2xl:self-auto"
+                          : "flex h-full min-h-0 w-full min-w-0 flex-1 max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl"
+                      }
+                    >
                       <Suspense
                         fallback={
                           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-[13px] text-gray-500">

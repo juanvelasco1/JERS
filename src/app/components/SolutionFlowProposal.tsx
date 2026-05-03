@@ -44,7 +44,13 @@ export function SolutionFlowProposal({
         FLUJO DE LA SOLUCIÓN PROPUESTA
       </p>
 
-      <div className="flex w-full items-start justify-between gap-0">
+      <div
+        className={
+          isComfort
+            ? "flex w-full items-start justify-center gap-1 sm:gap-2"
+            : "flex w-full items-start justify-center gap-1 sm:gap-1.5"
+        }
+      >
         {steps.map((s, i) => {
           const Icon = FLOW_ICONS[i] ?? User;
           const ring = FLOW_RING[i] ?? FLOW_RING[0];
@@ -53,15 +59,21 @@ export function SolutionFlowProposal({
             : "flex h-8 w-8 shrink-0 items-center justify-center sm:h-9 sm:w-9";
           return (
             <React.Fragment key={`${s.title}-${i}`}>
-              <div className="flex min-w-0 flex-[1_1_0] basis-0 flex-col items-center px-0.5 text-center">
+              <div
+                className={
+                  isComfort
+                    ? "flex min-w-0 flex-[1_1_0] basis-0 flex-col items-center px-1 text-center sm:px-1.5"
+                    : "flex min-w-0 flex-[1_1_0] basis-0 flex-col items-center px-0.5 text-center sm:px-1"
+                }
+              >
                 <div className={`${iconWrap} ${ring}`}>
                   <Icon className={isComfort ? "h-4 w-4 sm:h-[18px] sm:w-[18px]" : "h-3.5 w-3.5 sm:h-4 sm:w-4"} strokeWidth={2} />
                 </div>
                 <p
                   className={
                     isComfort
-                      ? "mt-2 w-full truncate text-[11px] leading-tight text-gray-800 sm:text-xs"
-                      : "mt-1 w-full truncate text-[7px] leading-tight text-gray-800 sm:text-[8px]"
+                      ? "mt-2 w-full max-w-full break-words text-[11px] leading-tight text-gray-800 [overflow-wrap:anywhere] line-clamp-2 sm:text-xs"
+                      : "mt-1 w-full max-w-full break-words text-[8px] leading-tight text-gray-800 [overflow-wrap:anywhere] line-clamp-2 sm:text-[9px]"
                   }
                   style={{ fontWeight: 600 }}
                   title={`${s.title} — ${s.subtitle}`}
@@ -71,8 +83,8 @@ export function SolutionFlowProposal({
                 <p
                   className={
                     isComfort
-                      ? "mt-1 line-clamp-2 w-full text-[10px] leading-snug text-gray-500 sm:text-[11px]"
-                      : "mt-0.5 line-clamp-2 w-full text-[6.5px] leading-snug text-gray-500 sm:text-[7px]"
+                      ? "mt-1 line-clamp-2 w-full max-w-full break-words text-[10px] leading-snug text-gray-500 [overflow-wrap:anywhere] sm:text-[11px]"
+                      : "mt-0.5 line-clamp-2 w-full max-w-full break-words text-[7px] leading-snug text-gray-500 [overflow-wrap:anywhere] sm:text-[8px]"
                   }
                 >
                   {s.subtitle}
@@ -80,7 +92,7 @@ export function SolutionFlowProposal({
               </div>
               {i < steps.length - 1 && (
                 <div
-                  className={`flex shrink-0 items-center self-center text-blue-300 ${isComfort ? "px-1 pt-3" : "px-0.5 pt-2 sm:px-1"}`}
+                  className={`flex w-4 shrink-0 items-center justify-center self-center text-blue-300 sm:w-5 ${isComfort ? "px-0 pt-3" : "px-0 pt-2"}`}
                   aria-hidden
                 >
                   <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="opacity-75 sm:w-3 sm:h-[7px]">

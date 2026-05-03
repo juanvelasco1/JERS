@@ -1112,11 +1112,23 @@ export function Onboarding({
     aiDiagnosis?.solutionFlow ?? buildFallbackSolutionFlow(recommendations);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={phase === "results" ? "flex min-w-0 flex-col" : "flex h-full flex-col"}>
       {/* Main split content */}
-      <div className="flex-1 flex overflow-hidden min-h-0 h-full">
+      <div
+        className={
+          phase === "results"
+            ? "flex w-full min-w-0 flex-col"
+            : "flex h-full min-h-0 flex-1 overflow-hidden"
+        }
+      >
         {/* LEFT 65% — header, progress, form, buttons */}
-        <div className="flex-[65] flex flex-col min-h-0">
+        <div
+          className={
+            phase === "results"
+              ? "flex w-full min-w-0 flex-col"
+              : "flex min-h-0 flex-[65] flex-col"
+          }
+        >
           {/* Top bar */}
           <div className="sticky top-0 z-20 flex items-center justify-between gap-2 px-4 sm:px-8 md:px-10 py-3 sm:py-4 min-w-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 border-b border-gray-100/80">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
@@ -1158,19 +1170,19 @@ export function Onboarding({
             </div>
           </div>
 
-          {/* Form content — results scroll inside fixed-height modal */}
+          {/* Form content — form/processing: scroll interno; resultados: flujo con scroll de página */}
           <div
-            className={`flex min-h-0 flex-1 flex-col px-4 sm:px-8 md:px-10 ${
+            className={`flex flex-1 flex-col px-4 sm:px-8 md:px-10 ${
               phase === "results"
-                ? "overflow-hidden pt-1"
-                : "justify-start sm:justify-center overflow-y-auto overscroll-contain pb-2 pt-2"
+                ? "min-h-0 pt-1 pb-6"
+                : "min-h-0 justify-start overflow-y-auto overscroll-contain pb-2 pt-2 sm:justify-center"
             }`}
           >
             <div
-              className={`mx-auto w-full min-h-0 ${
+              className={`mx-auto w-full min-w-0 ${
                 phase === "results"
-                  ? "max-h-full flex-1 overflow-y-auto overscroll-contain py-2 pb-3 w-full max-w-2xl [scrollbar-width:thin]"
-                  : `py-4 sm:py-6 w-full max-w-sm min-w-0 pb-4`
+                  ? "max-w-2xl py-2 pb-8"
+                  : `max-w-sm py-4 pb-4 sm:py-6`
               }`}
               onKeyDown={handleKeyDown}
             >

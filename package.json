@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite --host 127.0.0.1 --port 5173",
+    "dev": "vite",
+    "dev:free": "node scripts/free-dev-port.mjs && vite",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:supabase": "node scripts/verify-supabase-persistence.mjs"
