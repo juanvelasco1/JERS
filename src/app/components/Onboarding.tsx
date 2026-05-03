@@ -1126,7 +1126,7 @@ export function Onboarding({
           className={
             phase === "results"
               ? "flex w-full min-w-0 flex-col"
-              : "flex min-h-0 flex-[65] flex-col"
+              : "flex min-h-0 w-full min-w-0 flex-col lg:w-[65%] lg:max-w-[65%] lg:shrink-0"
           }
         >
           {/* Top bar */}
@@ -1749,7 +1749,7 @@ export function Onboarding({
 
         {/* RIGHT 35% — Tips only (hidden on mobile & results) */}
         {phase !== "results" && (
-          <div className="hidden lg:flex flex-[35] bg-[#FAFBFC] rounded-tr-2xl rounded-br-2xl items-center justify-center px-6">
+          <div className="hidden h-full min-h-0 w-[35%] shrink-0 flex-col bg-[#FAFBFC] lg:flex lg:items-center lg:justify-center lg:rounded-tr-2xl lg:rounded-br-2xl lg:px-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={phase === "form" ? step?.id : "processing"}

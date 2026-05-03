@@ -191,7 +191,7 @@ export function HomePage() {
             showOnboarding
               ? onboardingShell === "results"
                 ? "mt-2 flex-col items-center gap-4 pb-4 sm:mt-3 sm:pb-6 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:pb-8"
-                : "min-h-0 flex-1 flex-col items-stretch gap-4 pb-2 sm:mt-3 sm:pb-4 2xl:flex-row 2xl:items-start 2xl:pb-6"
+                : "min-h-0 flex-1 flex-col items-center gap-4 pb-2 sm:mt-3 sm:pb-4 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:pb-6"
               : "max-w-5xl min-h-0 flex-1 items-center mt-6 sm:mt-8"
           }`}
         >
@@ -223,7 +223,7 @@ export function HomePage() {
               showOnboarding
                 ? onboardingShell === "results"
                   ? "flex w-full max-w-full justify-center"
-                  : "w-full max-w-none"
+                  : "flex w-full max-w-full justify-center"
                 : "w-full max-w-5xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg"
             }`}
           >
@@ -246,21 +246,21 @@ export function HomePage() {
                   className={
                     onboardingShell === "results"
                       ? "flex w-full min-w-0 flex-col items-center"
-                      : "h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))] w-full min-h-0"
+                      : "flex h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))] w-full min-w-0 flex-col items-center"
                   }
                 >
                   <div
                     className={
                       onboardingShell === "results"
                         ? "flex w-full max-w-full min-w-0 flex-col items-center gap-4 2xl:w-fit 2xl:max-w-[min(100vw-2rem,calc(64rem+20rem+1.5rem))] 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:gap-5"
-                        : "flex h-full min-h-0 w-full max-w-full min-w-0 flex-col items-stretch justify-center gap-4 2xl:flex-row 2xl:items-start 2xl:gap-5"
+                        : "flex h-full min-h-0 w-full max-w-full min-w-0 flex-col items-center justify-center gap-4 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:gap-5"
                     }
                   >
                     <div
                       className={
                         onboardingShell === "results"
                           ? "flex w-full min-w-0 max-w-5xl shrink-0 flex-col self-center rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl 2xl:self-auto"
-                          : "flex h-full min-h-0 w-full min-w-0 flex-1 max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl"
+                          : "mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1 shrink-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl 2xl:mx-0"
                       }
                     >
                       <Suspense
