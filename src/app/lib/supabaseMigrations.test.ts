@@ -33,12 +33,14 @@ describe("Supabase migrations (schema as in previous project)", () => {
     const storageLegacy = join(migrationsDir, "20260319220000_onboarding_attachments_bucket.sql");
     const storageClientes = join(migrationsDir, "20260422120000_diagnostico_clientes_storage.sql");
     const storageMimes = join(migrationsDir, "20260422150000_diagnostico_clientes_allowed_mimes.sql");
+    const userLink = join(migrationsDir, "20260503120000_onboarding_submissions_user_link.sql");
 
     expect(existsSync(table)).toBe(true);
     expect(existsSync(rls)).toBe(true);
     expect(existsSync(storageLegacy)).toBe(true);
     expect(existsSync(storageClientes)).toBe(true);
     expect(existsSync(storageMimes)).toBe(true);
+    expect(existsSync(userLink)).toBe(true);
 
     const t = readFileSync(table, "utf8");
     expect(t).toContain("onboarding_submissions");
@@ -61,6 +63,11 @@ describe("Supabase migrations (schema as in previous project)", () => {
     expect(sMimes).toContain("allowed_mime_types");
     expect(sMimes).toContain("application/pdf");
     expect(sMimes).not.toMatch(/video\//);
+
+    const u = readFileSync(userLink, "utf8");
+    expect(u).toContain("user_id");
+    expect(u).toContain("claim_onboarding_submission");
+    expect(u).toContain("onboarding_submissions_anon_update");
     },
   );
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFallbackSolutionFlow, parseDiagnosisJson } from "./diagnosisAi";
+import { buildFallbackSolutionFlow, parseDiagnosisJson, parseStoredAIDiagnosis } from "./diagnosisAi";
 
 describe("diagnosisAi", () => {
   it("parses Gemini/OpenAI JSON including solutionFlow", () => {
@@ -27,6 +27,21 @@ describe("diagnosisAi", () => {
     expect(parsed?.solutionFlow?.steps).toHaveLength(4);
     expect(parsed?.solutionFlow?.narrative).toContain("recomendaciones");
     expect(parsed?.sugerenciaConsultoria).toContain("landing");
+  });
+
+  it("parseStoredAIDiagnosis accepts object from jsonb", () => {
+    const obj = {
+      summary: "Resumen.",
+      recommendations: [
+        { area: "Web", desc: "Desc", priority: "Alta" },
+        { area: "SEO", desc: "Desc2", priority: "Media" },
+      ],
+      nextSteps: ["Uno", "Dos", "Tres"],
+      source: "groq" as const,
+    };
+    const parsed = parseStoredAIDiagnosis(obj);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.source).toBe("groq");
   });
 
   it("buildFallbackSolutionFlow uses recommendation areas", () => {

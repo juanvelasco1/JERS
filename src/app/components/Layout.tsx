@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 import { ChevronDown, Loader2, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useSupabaseSession } from "@/app/hooks/useSupabaseSession";
 
 function RouteLoadingFallback() {
   return (
@@ -45,6 +46,7 @@ export function Layout() {
 function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean; setMobileMenuOpen: (v: boolean) => void }) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { supabase, user, loading: authLoading } = useSupabaseSession();
 
   const navItems = [
     { label: "Diagnóstico", hasDropdown: false, href: "/diagnostico" },
@@ -104,6 +106,37 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
                 )}
               </div>
             ))}
+            {!authLoading && (
+              <div className="flex items-center gap-1 pl-2 border-l border-gray-200/60 ml-1">
+                {user ? (
+                  <>
+                    <Link
+                      to="/mi-proyecto"
+                      className="px-3 py-2 text-[13px] text-blue-700 hover:text-blue-900 transition-colors rounded-md hover:bg-blue-50/80"
+                      style={{ fontWeight: 600 }}
+                    >
+                      Mi proyecto
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void supabase?.auth.signOut()}
+                      className="px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800 transition-colors rounded-md hover:bg-gray-50 cursor-pointer"
+                      style={{ fontWeight: 500 }}
+                    >
+                      Salir
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="px-3 py-2 text-[13px] text-gray-700 hover:text-black transition-colors rounded-md hover:bg-gray-50"
+                    style={{ fontWeight: 600 }}
+                  >
+                    Iniciar sesión
+                  </Link>
+                )}
+              </div>
+            )}
           </nav>
 
           {/* Mobile menu button */}
@@ -128,6 +161,16 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
               <Link to="/pricing" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
               <Link to="/conocenos" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Conócenos</Link>
               <Link to="/terminos" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" onClick={() => setMobileMenuOpen(false)}>Términos</Link>
+              {!authLoading && (
+                user ? (
+                  <>
+                    <Link to="/mi-proyecto" className="block py-2 px-3 text-[14px] text-blue-700 rounded-lg hover:bg-blue-50/80 transition-colors" style={{ fontWeight: 600 }} onClick={() => setMobileMenuOpen(false)}>Mi proyecto</Link>
+                    <button type="button" className="block py-2 px-3 text-[14px] text-gray-500 rounded-lg hover:bg-gray-100/50 transition-colors text-left w-full cursor-pointer" onClick={() => { setMobileMenuOpen(false); void supabase?.auth.signOut(); }}>Salir</button>
+                  </>
+                ) : (
+                  <Link to="/login" className="block py-2 px-3 text-[14px] text-gray-700 rounded-lg hover:bg-gray-100/50 transition-colors" style={{ fontWeight: 600 }} onClick={() => setMobileMenuOpen(false)}>Iniciar sesión</Link>
+                )
+              )}
             </div>
           </motion.div>
         )}

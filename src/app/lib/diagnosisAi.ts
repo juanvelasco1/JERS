@@ -89,52 +89,69 @@ function normalizeSolutionFlow(raw: unknown): SolutionFlowData | undefined {
   return { steps: steps.slice(0, 4), narrative };
 }
 
+type DiagnosisJsonRecord = Partial<AIDiagnosis> & {
+  solutionFlow?: unknown;
+  sugerencia_consultoria?: string;
+  sugerenciaConsultoria?: string;
+};
+
+function coerceAIDiagnosisFromRecord(parsed: DiagnosisJsonRecord): AIDiagnosis | null {
+  if (!parsed.summary || !Array.isArray(parsed.recommendations) || !Array.isArray(parsed.nextSteps)) return null;
+
+  const recommendations: AIDiagnosis["recommendations"] = parsed.recommendations
+    .filter((r) => r && typeof r.area === "string" && typeof r.desc === "string")
+    .slice(0, 4)
+    .map((r) => ({
+      area: r.area,
+      desc: r.desc,
+      priority: r.priority === "Alta" ? "Alta" : "Media",
+    }));
+
+  const nextSteps = parsed.nextSteps
+    .filter((stepText): stepText is string => typeof stepText === "string" && stepText.trim().length > 0)
+    .slice(0, 3);
+
+  if (!recommendations.length || !nextSteps.length) return null;
+
+  let summary = String(parsed.summary).trim();
+  if (summary.length > 550) summary = `${summary.slice(0, 547)}…`;
+
+  const solutionFlow = normalizeSolutionFlow(parsed.solutionFlow);
+
+  const rawSug = parsed.sugerencia_consultoria ?? parsed.sugerenciaConsultoria;
+  let sugerenciaConsultoria: string | undefined;
+  if (typeof rawSug === "string" && rawSug.trim()) {
+    sugerenciaConsultoria = rawSug.trim().slice(0, 600);
+  }
+
+  const src = parsed.source;
+  const source: DiagnosisSource | undefined =
+    src === "groq" || src === "openai" || src === "fallback" || src === "gemini" ? src : undefined;
+
+  return {
+    summary,
+    recommendations,
+    nextSteps,
+    ...(solutionFlow ? { solutionFlow } : {}),
+    ...(sugerenciaConsultoria ? { sugerenciaConsultoria } : {}),
+    ...(source ? { source } : {}),
+  };
+}
+
+/** Recupera `ai_diagnosis` persistido en `onboarding_submissions.answers_raw` (jsonb). */
+export function parseStoredAIDiagnosis(raw: unknown): AIDiagnosis | null {
+  if (!raw || typeof raw !== "object") return null;
+  return coerceAIDiagnosisFromRecord(raw as DiagnosisJsonRecord);
+}
+
 export function parseDiagnosisJson(raw: string): AIDiagnosis | null {
   const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   const candidate = jsonMatch ? jsonMatch[0] : cleaned;
 
   try {
-    const parsed = JSON.parse(candidate) as Partial<AIDiagnosis> & {
-      solutionFlow?: unknown;
-    };
-    if (!parsed.summary || !Array.isArray(parsed.recommendations) || !Array.isArray(parsed.nextSteps)) return null;
-
-    const recommendations: AIDiagnosis["recommendations"] = parsed.recommendations
-      .filter((r) => r && typeof r.area === "string" && typeof r.desc === "string")
-      .slice(0, 4)
-      .map((r) => ({
-        area: r.area,
-        desc: r.desc,
-        priority: r.priority === "Alta" ? "Alta" : "Media",
-      }));
-
-    const nextSteps = parsed.nextSteps
-      .filter((stepText): stepText is string => typeof stepText === "string" && stepText.trim().length > 0)
-      .slice(0, 3);
-
-    if (!recommendations.length || !nextSteps.length) return null;
-
-    let summary = String(parsed.summary).trim();
-    if (summary.length > 550) summary = `${summary.slice(0, 547)}…`;
-
-    const solutionFlow = normalizeSolutionFlow(parsed.solutionFlow);
-
-    const rawSug =
-      (parsed as { sugerencia_consultoria?: string }).sugerencia_consultoria ??
-      (parsed as { sugerenciaConsultoria?: string }).sugerenciaConsultoria;
-    let sugerenciaConsultoria: string | undefined;
-    if (typeof rawSug === "string" && rawSug.trim()) {
-      sugerenciaConsultoria = rawSug.trim().slice(0, 600);
-    }
-
-    return {
-      summary,
-      recommendations,
-      nextSteps,
-      ...(solutionFlow ? { solutionFlow } : {}),
-      ...(sugerenciaConsultoria ? { sugerenciaConsultoria } : {}),
-    };
+    const parsed = JSON.parse(candidate) as DiagnosisJsonRecord;
+    return coerceAIDiagnosisFromRecord(parsed);
   } catch {
     return null;
   }

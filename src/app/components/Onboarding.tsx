@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type ContextoArchivoMeta,
   isValidContextoActual,
@@ -22,8 +22,15 @@ import {
   readOnboardingDraft,
   type OnboardingDraftV1,
 } from "@/app/lib/onboardingDraft";
-import { CheckCircle2, ChevronsRight, Globe2, User } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { JERS_CAL_30MIN_BOOKING_URL } from "@/app/lib/jersBooking";
+import { DIAGNOSTIC_CLAIM_READY_EVENT } from "@/app/lib/diagnosticClaimEvents";
+import {
+  ONBOARDING_CLAIM_SUBMISSION_STORAGE_KEY,
+  ONBOARDING_SUBMISSION_ID_STORAGE_KEY,
+} from "@/app/lib/diagnosticClaimStorage";
+import { getSupabaseBrowser } from "@/app/lib/supabaseBrowser";
+import { resolveSubmissionIdForClaim } from "@/app/lib/onboardingClaimFlow";
 import {
   type AIDiagnosis,
   type SolutionFlowData,
@@ -31,87 +38,8 @@ import {
   buildFallbackSolutionFlow,
   fetchGroqDiagnosis,
 } from "@/app/lib/diagnosisAi";
-
-const FLOW_ICONS = [User, Globe2, ChevronsRight, CheckCircle2] as const;
-const FLOW_RING = [
-  "bg-blue-600 text-white shadow-sm rounded-full",
-  "bg-blue-600 text-white shadow-sm rounded-xl",
-  "bg-blue-600 text-white shadow-sm rounded-xl",
-  "bg-emerald-500 text-white shadow-sm rounded-full",
-] as const;
-
-/* ════════════════════════════════════════════════
-   Diagnosis: proposed solution flow (compact for modal)
-   ════════════════════════════════════════════════ */
-
-function SolutionFlowProposal({ flow }: { flow: SolutionFlowData }) {
-  const steps = flow.steps.slice(0, 4);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.82 }}
-      className="mt-2 shrink-0 rounded-xl border border-blue-100 bg-gradient-to-b from-white to-blue-50/50 p-2.5 sm:p-3"
-    >
-      <p
-        className="text-[9px] sm:text-[10px] text-blue-600 mb-2 text-center sm:text-left"
-        style={{ fontWeight: 600, letterSpacing: "0.05em" }}
-      >
-        FLUJO DE LA SOLUCIÓN PROPUESTA
-      </p>
-
-      <div className="flex w-full items-start justify-between gap-0">
-        {steps.map((s, i) => {
-          const Icon = FLOW_ICONS[i] ?? User;
-          const ring = FLOW_RING[i] ?? FLOW_RING[0];
-          return (
-            <React.Fragment key={`${s.title}-${i}`}>
-              <div className="flex min-w-0 flex-[1_1_0] basis-0 flex-col items-center px-0.5 text-center">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center sm:h-9 sm:w-9 ${ring}`}>
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2} />
-                </div>
-                <p
-                  className="mt-1 w-full truncate text-[7px] leading-tight text-gray-800 sm:text-[8px]"
-                  style={{ fontWeight: 600 }}
-                  title={`${s.title} — ${s.subtitle}`}
-                >
-                  {s.title}
-                </p>
-                <p className="mt-0.5 line-clamp-2 w-full text-[6.5px] leading-snug text-gray-500 sm:text-[7px]">
-                  {s.subtitle}
-                </p>
-              </div>
-              {i < steps.length - 1 && (
-                <div
-                  className="flex shrink-0 items-center self-center px-0.5 pt-2 text-blue-300 sm:px-1"
-                  aria-hidden
-                >
-                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="opacity-75 sm:w-3 sm:h-[7px]">
-                    <path
-                      d="M0 3h6M6 0.5L9 3 6 5.5"
-                      stroke="currentColor"
-                      strokeWidth="0.9"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="2 1.5"
-                    />
-                  </svg>
-                </div>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      <div className="mt-2 rounded-lg border border-blue-100/90 bg-blue-50/70 px-2 py-2 sm:px-2.5">
-        <p className="text-[9px] leading-snug text-gray-600 line-clamp-4 sm:text-[10px] sm:leading-relaxed sm:line-clamp-none">
-          {flow.narrative}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
+import { getIndustriaLabel, getInvestmentLabel } from "@/app/lib/onboardingDisplayLabels";
+import { SolutionFlowProposal } from "@/app/components/SolutionFlowProposal";
 
 /* ════════════════════════════════════════════════
    Right-side: Tips, illustrations & design assets
@@ -522,6 +450,7 @@ const steps = [
 /* ════════════════════════════════════════════════
    Helpers for results
    ════════════════════════════════════════════════ */
+
 function getRecommendations(data: Record<string, string>, prompts: string[]) {
   const recs: { area: string; desc: string; priority: string }[] = [];
 
@@ -543,18 +472,6 @@ function getRecommendations(data: Record<string, string>, prompts: string[]) {
   // Always add branding
   recs.push({ area: "Identidad de marca", desc: "Logo, colores y estilo visual que reflejen la calidad de tu negocio.", priority: "Media" });
   return recs;
-}
-
-function getInvestmentLabel(val: string) {
-  if (val === "inicial") return "Menos de $5,000";
-  if (val === "profesional") return "$5,000 — $20,000";
-  if (val === "avanzado") return "Más de $20,000";
-  return "Por definir";
-}
-
-function getIndustriaLabel(val: string) {
-  const map: Record<string, string> = { comercio: "Comercio", servicios: "Servicios", salud: "Salud", educacion: "Educación", otro: "Otro" };
-  return map[val] || val;
 }
 
 function getContextoActualLabel(val: string) {
@@ -590,7 +507,14 @@ async function uploadContextoArchivos(
 /* ════════════════════════════════════════════════
    Main Onboarding Component
    ════════════════════════════════════════════════ */
-export function Onboarding({ onClose }: { onClose: () => void }) {
+export function Onboarding({
+  onClose,
+  onShellPhaseChange,
+}: {
+  onClose: () => void;
+  /** Para que el contenedor externo mantenga altura fija hasta resultados. */
+  onShellPhaseChange?: (shell: "flow" | "results") => void;
+}) {
   const initialDraft = useMemo(() => readOnboardingDraft(), []);
   const total = steps.length;
 
@@ -608,12 +532,11 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   const [aiDiagnosis, setAiDiagnosis] = useState<AIDiagnosis | null>(() => initialDraft?.aiDiagnosis ?? null);
   const [aiErrorHint, setAiErrorHint] = useState<string | null>(null);
 
-  const STORAGE_KEY = "onboarding_submission_id_v1";
   /** Refleja el id de fila en Supabase de forma síncrona (evita carreras tras insert antes del re-render). */
   const onboardingSubmissionIdRef = useRef<string | null>(null);
   const [onboardingSubmissionId, setOnboardingSubmissionId] = useState<string | null>(() => {
     try {
-      const v = localStorage.getItem(STORAGE_KEY);
+      const v = localStorage.getItem(ONBOARDING_SUBMISSION_ID_STORAGE_KEY);
       onboardingSubmissionIdRef.current = v;
       return v;
     } catch {
@@ -623,31 +546,20 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  const supabase = useMemo(() => {
-    const projectId = (import.meta.env.VITE_PROJECT_ID as string | undefined)?.trim();
-    const url =
-      (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
-      || (projectId ? `https://${projectId}.supabase.co` : undefined);
-    const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
-    if (!url || !key) return null;
-
-    return createClient(url, key, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  }, []);
+  const supabase = useMemo(() => getSupabaseBrowser(), []);
 
   useEffect(() => {
     try {
-      if (onboardingSubmissionId) localStorage.setItem(STORAGE_KEY, onboardingSubmissionId);
-      else localStorage.removeItem(STORAGE_KEY);
+      if (onboardingSubmissionId) localStorage.setItem(ONBOARDING_SUBMISSION_ID_STORAGE_KEY, onboardingSubmissionId);
+      else localStorage.removeItem(ONBOARDING_SUBMISSION_ID_STORAGE_KEY);
     } catch {
       // ignore storage errors (e.g., in restricted environments)
     }
   }, [onboardingSubmissionId]);
+
+  useEffect(() => {
+    onShellPhaseChange?.(phase === "results" ? "results" : "flow");
+  }, [phase, onShellPhaseChange]);
 
   const step = steps[currentStep];
   const value = data[step?.id] || "";
@@ -744,7 +656,8 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           onboardingSubmissionIdRef.current = null;
           setOnboardingSubmissionId(null);
         }
-        return payload.clearLocalStorageOnSuccess ? null : newId;
+        // Siempre devolver el id de fila escrito (p. ej. ticket de reclamación tras clearLocalStorage).
+        return newId;
       } else {
         const update = await supabase
           .from("onboarding_submissions")
@@ -756,7 +669,7 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
           onboardingSubmissionIdRef.current = null;
           setOnboardingSubmissionId(null);
         }
-        return payload.clearLocalStorageOnSuccess ? null : activeId;
+        return activeId;
       }
     } catch (err) {
       console.error("Failed to persist onboarding answers:", err);
@@ -871,11 +784,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     promptsSnapshot: string[],
     rawResponseText?: string,
   ) => {
+    const submissionIdBeforePersist = onboardingSubmissionIdRef.current;
     const problemaCombined =
       answersSnapshot.problema?.trim()
       || [...promptsSnapshot, extraDetail].filter(Boolean).join("; ");
 
-    await persistOnboarding({
+    const persistedRowId = await persistOnboarding({
       current_step: total,
       completed_at: new Date().toISOString(),
       empresa: answersSnapshot.empresa?.trim() || null,
@@ -895,6 +809,39 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
       }),
       clearLocalStorageOnSuccess: true,
     });
+
+    const claimId = resolveSubmissionIdForClaim(submissionIdBeforePersist, persistedRowId);
+    if (!claimId) return;
+
+    if (supabase) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        const { data: claimed, error: rpcError } = await supabase.rpc("claim_onboarding_submission", {
+          p_submission: claimId,
+        });
+        if (rpcError) {
+          console.warn("claim_onboarding_submission (post-diagnosis):", rpcError);
+        }
+        if (claimed === true) {
+          return;
+        }
+      }
+    }
+
+    // Anónimo, sin Supabase en cliente, o claim fallido: ticket para panel / login / Mi proyecto.
+    try {
+      localStorage.setItem(ONBOARDING_CLAIM_SUBMISSION_STORAGE_KEY, claimId);
+    } catch {
+      // ignore
+    }
+    try {
+      window.dispatchEvent(new Event(DIAGNOSTIC_CLAIM_READY_EVENT));
+    } catch {
+      // ignore
+    }
   };
 
   const startProcessing = () => {
@@ -925,6 +872,11 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
     if (!shouldReset) return;
 
     clearOnboardingDraftStorage();
+    try {
+      localStorage.removeItem(ONBOARDING_CLAIM_SUBMISSION_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     setCurrentStep(0);
     setData({});
     setSelectedPrompts([]);
@@ -1697,6 +1649,12 @@ export function Onboarding({ onClose }: { onClose: () => void }) {
                     </div>
 
                     <SolutionFlowProposal flow={solutionFlowForUi} />
+
+                    {!supabase && (
+                      <p className="mt-4 text-center text-[11px] text-gray-400 leading-relaxed">
+                        Para guardar tu diagnóstico en una cuenta, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el proyecto.
+                      </p>
+                    )}
 
                     {/* Bottom */}
                     <motion.div

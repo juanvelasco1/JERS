@@ -72,6 +72,20 @@ export const router = createBrowserRouter(
               },
             },
             {
+              path: "login",
+              lazy: async () => {
+                const m = await import("./components/LoginPage");
+                return { Component: m.LoginPage };
+              },
+            },
+            {
+              path: "mi-proyecto",
+              lazy: async () => {
+                const m = await import("./components/MiProyectoPage");
+                return { Component: m.MiProyectoPage };
+              },
+            },
+            {
               path: "*",
               lazy: async () => {
                 const m = await import("./components/NotFound");

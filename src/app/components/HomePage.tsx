@@ -1,12 +1,16 @@
 import { Link, useSearchParams } from "react-router";
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { ProcessAnimation } from "./ProcessAnimation";
+import { FollowUpSidePanel } from "./FollowUpSidePanel";
 
 const Onboarding = lazy(() =>
   import("./Onboarding").then((m) => ({ default: m.Onboarding })),
 );
+
+/** Si React Router remonta la home, recuperamos el modal del diagnóstico en la misma pestaña. */
+const DIAG_UI_SESSION_KEY = "jers_diag_ui_open_v1";
 
 /* ── Doodle decorator ── */
 function Doodle({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -25,15 +29,62 @@ function Doodle({ children, className }: { children: React.ReactNode; className?
 }
  
 export function HomePage() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return sessionStorage.getItem(DIAG_UI_SESSION_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [dismissFollowUp, setDismissFollowUp] = useState(false);
+  /** Tamaño del shell: fijo en formulario/procesando; se relaja solo en resultados. */
+  const [onboardingShell, setOnboardingShell] = useState<"flow" | "results">("flow");
   const [searchParams, setSearchParams] = useSearchParams();
+  /** Primitivo estable: el objeto `searchParams` cambia de referencia en cada render y rompe el efecto. */
+  const searchKey = searchParams.toString();
+  /** Solo consumimos `?diagnostico=true` una vez por cada aparición en la URL. */
+  const diagnosticoHandledRef = useRef(false);
+
+  const setDiagnosticoModalOpen = useCallback((open: boolean) => {
+    setShowOnboarding(open);
+    try {
+      if (open) sessionStorage.setItem(DIAG_UI_SESSION_KEY, "1");
+      else sessionStorage.removeItem(DIAG_UI_SESSION_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
-    if (searchParams.get("diagnostico") === "true") {
-      setShowOnboarding(true);
-      setSearchParams({}, { replace: true });
+    const params = new URLSearchParams(searchKey);
+    if (params.get("diagnostico") !== "true") {
+      diagnosticoHandledRef.current = false;
+      return;
     }
-  }, [searchParams, setSearchParams]);
+    if (diagnosticoHandledRef.current) return;
+    diagnosticoHandledRef.current = true;
+    setDiagnosticoModalOpen(true);
+    // Solo tocar el query string (SPA). `navigate()` a la misma ruta puede remontar según versión y parecer “recarga”.
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("diagnostico");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchKey, setSearchParams, setDiagnosticoModalOpen]);
+
+  useEffect(() => {
+    if (!showOnboarding) {
+      setDismissFollowUp(false);
+      setOnboardingShell("flow");
+    }
+  }, [showOnboarding]);
+
+  const handleOnboardingShellChange = useCallback((shell: "flow" | "results") => {
+    setOnboardingShell(shell);
+  }, []);
 
   return (
     <>
@@ -97,7 +148,7 @@ export function HomePage() {
                 className="relative flex flex-col w-full min-w-0 sm:inline-flex sm:flex-row sm:w-auto items-stretch sm:items-center gap-3"
               >
                 <button
-                  onClick={() => setShowOnboarding(true)}
+                  onClick={() => setDiagnosticoModalOpen(true)}
                   className="inline-flex justify-center px-5 py-2.5 text-[13px] text-white rounded-lg bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] hover:shadow-[0_4px_20px_rgba(37,99,235,0.35)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                   style={{ fontWeight: 600 }}
                 >
@@ -128,8 +179,10 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className={`max-w-5xl w-full min-w-0 mx-auto px-3 sm:px-4 relative flex justify-center flex-1 min-h-0 ${
-            showOnboarding ? "items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6" : "items-center mt-6 sm:mt-8"
+          className={`w-full min-w-0 mx-auto px-3 sm:px-4 relative flex justify-center flex-1 min-h-0 ${
+            showOnboarding
+              ? "max-w-none lg:max-w-[calc(64rem+20rem+1.25rem)] xl:max-w-[calc(64rem+20rem+2rem)] items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6"
+              : "max-w-5xl items-center mt-6 sm:mt-8"
           }`}
         >
           <AnimatePresence>
@@ -155,7 +208,9 @@ export function HomePage() {
             )}
           </AnimatePresence>
 
-          <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full min-w-0 max-w-5xl">
+          <div
+            className={`w-full min-w-0 ${showOnboarding ? "max-w-none" : "max-w-5xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg"}`}
+          >
             <AnimatePresence mode="wait">
               {!showOnboarding ? (
                 <motion.div
@@ -172,19 +227,38 @@ export function HomePage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="bg-white border border-gray-100 w-full min-h-0 max-h-[calc(100dvh_-_8.5rem)] lg:max-h-[calc(100dvh_-_7.5rem)] flex flex-col"
-                  style={{ height: "clamp(360px, calc(100dvh - 8.5rem), 760px)" }}
+                  className={
+                    onboardingShell === "results"
+                      ? "w-full min-h-[min(720px,calc(100dvh-8.5rem))] max-h-[calc(100dvh-4rem)] h-auto"
+                      : "w-full min-h-0 h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))]"
+                  }
                 >
-                  <Suspense
-                    fallback={
-                      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-[13px] text-gray-500">
-                        <Loader2 className="h-7 w-7 animate-spin text-blue-600" aria-hidden />
-                        <span>Cargando diagnóstico…</span>
-                      </div>
-                    }
-                  >
-                    <Onboarding onClose={() => setShowOnboarding(false)} />
-                  </Suspense>
+                  <div className="flex w-full max-w-none items-start justify-center gap-4 lg:gap-5 h-full min-h-0">
+                    <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full min-w-0 flex-1 max-w-5xl bg-white border border-gray-100 flex flex-col h-full min-h-0">
+                      <Suspense
+                        fallback={
+                          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-[13px] text-gray-500">
+                            <Loader2 className="h-7 w-7 animate-spin text-blue-600" aria-hidden />
+                            <span>Cargando diagnóstico…</span>
+                          </div>
+                        }
+                      >
+                        <Onboarding
+                          onClose={() => {
+                            setDiagnosticoModalOpen(false);
+                            setDismissFollowUp(false);
+                          }}
+                          onShellPhaseChange={handleOnboardingShellChange}
+                        />
+                      </Suspense>
+                    </div>
+
+                    <div className="hidden lg:block">
+                      {!dismissFollowUp && (
+                        <FollowUpSidePanel onDismiss={() => setDismissFollowUp(true)} />
+                      )}
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
