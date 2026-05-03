@@ -200,7 +200,7 @@ export function ConocenosPage() {
     <div className="min-h-dvh min-h-screen bg-white text-gray-900 antialiased font-sans">
       {/* Hero + barra superior (pantalla completa ancho viewport) */}
       <header className="relative text-white" style={{ background: `linear-gradient(165deg, ${BRAND_DEEP} 0%, ${BRAND} 55%, #3B82F6 100%)` }}>
-        <div className="max-w-5xl mx-auto px-3 sm:px-6 pt-12 sm:pt-16 pb-4">
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 pb-4">
           <div className="flex items-center justify-between gap-4 mb-10 sm:mb-14 h-12">
             <Link to="/" className="flex items-center gap-1 min-w-0 shrink-0" style={{ fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
               <span className="text-sm sm:text-[15px]" style={{ fontWeight: 700 }}>
