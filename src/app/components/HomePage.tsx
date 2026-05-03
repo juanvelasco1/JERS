@@ -88,7 +88,13 @@ export function HomePage() {
 
   return (
     <>
-      <div className="min-h-[calc(100dvh-4rem)] pb-12 sm:pb-20 relative overflow-x-hidden flex flex-col w-full max-w-[100vw]">
+      <div
+        className={`relative flex w-full min-w-0 max-w-full flex-col overflow-x-clip ${
+          showOnboarding
+            ? "min-h-0 flex-1 pb-2 sm:pb-4"
+            : "min-h-[calc(100dvh-4rem)] pb-12 sm:pb-20"
+        }`}
+      >
         {/* Doodles */}
         <AnimatePresence>
           {!showOnboarding && (
@@ -179,10 +185,10 @@ export function HomePage() {
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className={`w-full min-w-0 mx-auto px-3 sm:px-4 relative flex justify-center flex-1 min-h-0 ${
+          className={`relative mx-auto flex w-full min-w-0 max-w-full flex-1 justify-center px-3 sm:px-4 ${
             showOnboarding
-              ? "max-w-none lg:max-w-[calc(64rem+20rem+1.25rem)] xl:max-w-[calc(64rem+20rem+2rem)] items-start mt-2 sm:mt-3 lg:mt-5 pb-2 sm:pb-4 lg:pb-6"
-              : "max-w-5xl items-center mt-6 sm:mt-8"
+              ? "mt-2 min-h-0 flex-col items-stretch gap-4 pb-2 sm:mt-3 sm:pb-4 2xl:flex-row 2xl:items-start 2xl:pb-6"
+              : "max-w-5xl min-h-0 items-center mt-6 sm:mt-8"
           }`}
         >
           <AnimatePresence>
@@ -229,12 +235,12 @@ export function HomePage() {
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                   className={
                     onboardingShell === "results"
-                      ? "w-full min-h-[min(720px,calc(100dvh-8.5rem))] max-h-[calc(100dvh-4rem)] h-auto"
-                      : "w-full min-h-0 h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))]"
+                      ? "h-auto w-full min-h-0 max-h-[min(720px,calc(100dvh-4rem))]"
+                      : "h-[min(720px,calc(100dvh-8.5rem))] max-h-[min(720px,calc(100dvh-8.5rem))] w-full min-h-0"
                   }
                 >
-                  <div className="flex w-full max-w-none items-start justify-center gap-4 lg:gap-5 h-full min-h-0">
-                    <div className="rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full min-w-0 flex-1 max-w-5xl bg-white border border-gray-100 flex flex-col h-full min-h-0">
+                  <div className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-col items-stretch justify-center gap-4 2xl:flex-row 2xl:items-start 2xl:gap-5">
+                    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 max-w-5xl flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg sm:rounded-2xl">
                       <Suspense
                         fallback={
                           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-12 text-[13px] text-gray-500">
@@ -253,9 +259,11 @@ export function HomePage() {
                       </Suspense>
                     </div>
 
-                    <div className="hidden lg:block">
+                    <div className="hidden w-full min-w-0 shrink-0 lg:block 2xl:w-auto">
                       {!dismissFollowUp && (
-                        <FollowUpSidePanel onDismiss={() => setDismissFollowUp(true)} />
+                        <div className="mx-auto w-full max-w-[320px] 2xl:mx-0">
+                          <FollowUpSidePanel onDismiss={() => setDismissFollowUp(true)} />
+                        </div>
                       )}
                     </div>
                   </div>

@@ -21,9 +21,9 @@ export function Layout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-dvh min-h-screen flex flex-col bg-[#FCFAF5] w-full max-w-[100vw] overflow-x-hidden">
+    <div className="min-h-dvh min-h-screen flex flex-col bg-[#FCFAF5] w-full min-w-0 max-w-full overflow-x-clip">
       <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
-      <main className="flex-1 pt-16 min-h-0 min-w-0 w-full overflow-x-hidden">
+      <main className="flex flex-1 flex-col pt-16 min-h-0 min-w-0 w-full overflow-x-clip">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -31,6 +31,7 @@ export function Layout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3 }}
+            className="flex min-h-0 min-w-0 w-full flex-1 flex-col"
           >
             <Suspense fallback={<RouteLoadingFallback />}>
               <Outlet />

@@ -115,11 +115,11 @@ async function run() {
     await page.waitForSelector("text/Tu diagnóstico está listo", { timeout: 30000 });
     await page.waitForSelector("text/FLUJO DE LA SOLUCIÓN PROPUESTA", { timeout: 10000 });
     const calHref = await page.$eval(
-      'a[href*="cal.com/monitor-jers"]',
+      'a[href*="app.cal.com/jers-consultora-digital"]',
       (el) => el.getAttribute("href"),
     );
-    if (!calHref?.includes("monitor-jers-zrnnsq/30min")) {
-      throw new Error(`Expected Cal.com 30min link, got: ${calHref}`);
+    if (!calHref?.includes("jers-consultora-digital")) {
+      throw new Error(`Expected Cal.com booking link, got: ${calHref}`);
     }
     await page.screenshot({ path: path.join(artifactsDir, "03-results.png"), fullPage: true });
 

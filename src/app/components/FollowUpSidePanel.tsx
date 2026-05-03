@@ -101,6 +101,36 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
     })();
   }, [supabase, submissionId, tryClaim]);
 
+  const handleGuestLink = async () => {
+    setError(null);
+    if (!supabase) {
+      setError("Supabase no está configurado en el proyecto.");
+      return;
+    }
+    if (!submissionId) {
+      setError("No encontramos un diagnóstico pendiente por vincular.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error: anonErr } = await supabase.auth.signInAnonymously();
+      if (anonErr) {
+        setError(
+          anonErr.message.includes("Anonymous") || /anonymous/i.test(anonErr.message)
+            ? "Activa “Anonymous sign-ins” en Supabase (Authentication → Providers → Anonymous)."
+            : anonErr.message,
+        );
+        return;
+      }
+      const ok = await tryClaim(supabase, submissionId);
+      if (!ok) {
+        setError("Sesión iniciada, pero no pudimos vincular este diagnóstico. Prueba desde Mi proyecto o vuelve a abrir el flujo.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleRegister = async () => {
     setError(null);
     if (!supabase) {
@@ -120,8 +150,8 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
       return;
     }
     const e = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      setError("Introduce un correo válido.");
+    if (!e) {
+      setError("Escribe el correo que quieres usar como usuario.");
       return;
     }
 
@@ -153,7 +183,7 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
   if (!supabase || (!submissionId && !accountLinked && !pendingEmailConfirm)) return null;
 
   return (
-    <div className="w-[320px] shrink-0">
+    <div className="w-full max-w-[320px] shrink-0">
       <div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 bg-white">
           <p className="text-[10px] text-blue-600 mb-1" style={{ fontWeight: 600, letterSpacing: "0.10em" }}>
@@ -173,7 +203,7 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
             </button>
           </div>
           <p className="mt-1 text-[12px] text-blue-900/75 leading-relaxed">
-            Regístrate para que este diagnóstico quede enlazado a tu usuario.
+            Vincula el diagnóstico con sesión de invitado (sin correo) o crea cuenta con correo si lo prefieres.
           </p>
         </div>
 
@@ -182,16 +212,28 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
             <div className="space-y-2.5">
               <button
                 type="button"
-                onClick={() => setStep("register")}
-                className="w-full rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 py-2.5 text-[13px] text-white transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-md hover:shadow-blue-600/25"
+                disabled={busy}
+                onClick={() => void handleGuestLink()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 py-2.5 text-[13px] text-white transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-md hover:shadow-blue-600/25 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-none"
                 style={{ fontWeight: 700 }}
               >
-                Registrarme
+                {busy ? <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden /> : null}
+                Guardar sin correo (este dispositivo)
               </button>
               <button
                 type="button"
+                disabled={busy}
+                onClick={() => setStep("register")}
+                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 text-[13px] text-blue-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
+                style={{ fontWeight: 600 }}
+              >
+                Registrarme con correo
+              </button>
+              <button
+                type="button"
+                disabled={busy}
                 onClick={onDismiss}
-                className="w-full rounded-xl border border-gray-100 bg-white py-2.5 text-[13px] text-blue-800 transition-colors hover:bg-gray-50"
+                className="w-full rounded-xl border border-gray-100 bg-white py-2.5 text-[13px] text-blue-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
                 style={{ fontWeight: 600 }}
               >
                 No por ahora
@@ -232,7 +274,7 @@ export function FollowUpSidePanel(props: { onDismiss: () => void }) {
                 </label>
                 <input
                   id="side-register-email"
-                  type="email"
+                  type="text"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
