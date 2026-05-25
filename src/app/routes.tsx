@@ -1,8 +1,14 @@
 import { createBrowserRouter, Outlet } from "react-router";
+import { GoogleAnalyticsPageView } from "./components/GoogleAnalyticsPageView";
 import { Layout } from "./components/Layout";
 
 function RootOutlet() {
-  return <Outlet />;
+  return (
+    <>
+      <GoogleAnalyticsPageView />
+      <Outlet />
+    </>
+  );
 }
 
 /** `conocenos` va fuera de `Layout` (pantalla completa con cabecera propia). El resto mantiene el layout del sitio. */

@@ -38,6 +38,7 @@ import {
   buildFallbackSolutionFlow,
   fetchGroqDiagnosis,
 } from "@/app/lib/diagnosisAi";
+import { trackDiagnosisReportGenerated } from "@/app/lib/googleAnalytics";
 import { getIndustriaLabel, getInvestmentLabel } from "@/app/lib/onboardingDisplayLabels";
 import { SolutionFlowProposal } from "@/app/components/SolutionFlowProposal";
 
@@ -871,6 +872,12 @@ export function Onboarding({
 
       setAiErrorHint(errorHint ?? null);
       await persistDiagnosisResult(diagnosis, answersSnapshot, promptsSnapshot, rawResponseText);
+      trackDiagnosisReportGenerated({
+        source: diagnosis.source ?? "unknown",
+        usedFallback: diagnosis.source === "fallback",
+        hasContextFiles: contextoArchivosMeta.length > 0,
+        promptCount: promptsSnapshot.length,
+      });
       setAiDiagnosis(diagnosis);
       setPhase("results");
     })();
