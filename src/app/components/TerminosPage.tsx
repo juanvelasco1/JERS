@@ -98,7 +98,7 @@ export function TerminosPage() {
             <div>
               <h2 className="text-[15px] text-gray-900 mb-2" style={{ fontWeight: 600 }}>8. Contacto</h2>
               <p>
-                Si tiene preguntas sobre estos Términos y Condiciones, puede contactarnos a través de nuestro formulario de contacto en el sitio web o enviarnos un correo electrónico a contacto@jersconsultora.com.
+                Si tiene preguntas sobre estos Términos y Condiciones, puede contactarnos a través de nuestro formulario de contacto en el sitio web o enviarnos un correo electrónico a <b>monitorjers@gmail.com</b>.
               </p>
             </div>
           </div>

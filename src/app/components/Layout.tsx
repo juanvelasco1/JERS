@@ -53,7 +53,7 @@ function Header({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean
     { label: "Diagnóstico", hasDropdown: false, href: "/diagnostico" },
     { label: "Conócenos", hasDropdown: false, href: "/conocenos" },
     { label: "Portafolio", hasDropdown: false, href: "/portafolio" },
-    { label: "Pricing", hasDropdown: false, href: "/pricing" },
+    { label: "Alianza", hasDropdown: false, href: "/pricing" },
   ];
 
   return (

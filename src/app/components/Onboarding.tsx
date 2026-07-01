@@ -40,6 +40,16 @@ import {
 } from "@/app/lib/diagnosisAi";
 import { trackDiagnosisReportGenerated } from "@/app/lib/googleAnalytics";
 import { getIndustriaLabel, getInvestmentLabel } from "@/app/lib/onboardingDisplayLabels";
+import { AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/app/components/ui/alert-dialog";
 import { SolutionFlowProposal } from "@/app/components/SolutionFlowProposal";
 
 /* ════════════════════════════════════════════════
@@ -884,11 +894,6 @@ export function Onboarding({
   };
 
   const resetOnboarding = () => {
-    const shouldReset = window.confirm(
-      "¿Seguro que deseas reiniciar el diagnóstico? Se perderá el avance guardado.",
-    );
-    if (!shouldReset) return;
-
     clearOnboardingDraftStorage();
     try {
       localStorage.removeItem(ONBOARDING_CLAIM_SUBMISSION_STORAGE_KEY);
@@ -910,6 +915,37 @@ export function Onboarding({
     onboardingSubmissionIdRef.current = null;
     setOnboardingSubmissionId(null);
   };
+
+  const ResetOnboardingDialog = ({ className }: { className?: string }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button
+          type="button"
+          className={`text-[13px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer ${className ?? ""}`}
+          style={{ fontWeight: 500 }}
+        >
+          Reiniciar diagnóstico
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reiniciar diagnóstico</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se perderá el avance guardado. ¿Seguro que deseas continuar?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+            onClick={resetOnboarding}
+          >
+            Aceptar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   const goNext = async () => {
     const isLastStep = currentStep >= total - 1;
@@ -1150,14 +1186,7 @@ export function Onboarding({
           {/* Top bar */}
           <div className="sticky top-0 z-20 flex min-w-0 items-center justify-between gap-2 border-b border-gray-100/80 bg-white/95 py-3 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] backdrop-blur supports-[backdrop-filter]:bg-white/90 sm:py-4 sm:pl-8 sm:pr-8 md:pl-10 md:pr-10">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
-              <button
-                type="button"
-                onClick={resetOnboarding}
-                className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                style={{ fontWeight: 500 }}
-              >
-                Reiniciar diagnóstico
-              </button>
+              <ResetOnboardingDialog />
               {phase === "form" && (
                 <>
                   
@@ -1204,14 +1233,7 @@ export function Onboarding({
               }`}
               onKeyDown={handleKeyDown}
             >
-              <button
-                type="button"
-                onClick={resetOnboarding}
-                className="sm:hidden inline-flex mb-3 text-[12px] text-gray-400 hover:text-gray-600 transition-colors cursor-pointer px-2 py-1 rounded-md hover:bg-gray-50"
-                style={{ fontWeight: 500 }}
-              >
-                Reiniciar diagnóstico
-              </button>
+              <ResetOnboardingDialog className="sm:hidden inline-flex mb-3 text-[12px] px-2 py-1 rounded-md hover:bg-gray-50" />
               <AnimatePresence mode="wait" custom={direction}>
                 {/* ─── FORM ─── */}
                 {phase === "form" && (
